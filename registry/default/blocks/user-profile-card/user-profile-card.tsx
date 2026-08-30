@@ -29,24 +29,29 @@ import {
   Music,
   Lock,
   CheckCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  Wand2,
+  Leaf,
+  Layers,
+  Award
 } from 'lucide-react';
 import type { 
   UserProfileData, 
   UserProfileCardProps, 
   AvatarDecoration, 
   BannerEffect, 
-  NitroLevel, 
+  ProfileEffect, 
   SubscriptionTier, 
   SubscriptionPlan, 
   ProfileTab, 
   ProfileContext, 
   PostItem, 
   NitroSticker, 
-  NitroSound 
+  NitroSound,
+  ServerRole 
 } from './types';
 
-export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, NitroLevel, SubscriptionTier, ProfileTab, ProfileContext };
+export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, SubscriptionTier, ProfileTab, ProfileContext };
 
 /* ========================================================
    INDEXEDDB AUTO-PERSISTENCE ENGINE FOR PROFILE & SUBSCRIPTION
@@ -105,7 +110,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     badge: 'Basic',
     color: 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200',
     features: [
-      'Standard Avatar & Cover Photo',
+      'Standard Static Avatar & Cover Photo',
       'Basic Custom Status',
       'View Feed Posts & Media Gallery',
       'Standard Like & Share Reactions'
@@ -127,23 +132,81 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
   {
     id: 'nitro_pro',
-    name: 'Nitro Pro (Boost)',
+    name: 'Nitro Pro (Full Nitro)',
     price: '$9.99',
     period: 'per month',
     badge: 'Full Nitro Perks',
     recommended: true,
     color: 'border-purple-500 bg-gradient-to-br from-purple-900/30 via-indigo-900/20 to-slate-900 text-white shadow-xl shadow-purple-500/20',
     features: [
-      'Unlock All 8 Animated Avatar Decorations',
-      'Unlock All 4 Animated Banner Effects',
-      'Full Nitro Soundboard Audio Sampler',
-      'Holographic Name Metallic Shimmer Animation',
-      '2 Free Server Boosts Included',
-      'Custom Vanity URL (discord.gg/ram)',
-      'Super Reaction Particle Explosions'
+      'Looping GIF Animated Profile Avatar',
+      'Looping GIF Animated Cover Banner',
+      'Full-Screen Programmatic Profile Effects (Magic Spells, Glitch, Autumn Leaves)',
+      'Shop Avatar Decorations (Gold Crown, Cyber Neon, Flame Aura)',
+      'Server Level 1 Animated Sidebar Server Icon',
+      'Server Level 1 Holographic Animated Gradient Roles',
+      'Server Level 3 Animated Sidebar Banner Slot',
+      'Nitro Soundboard Audio Sampler & 2 Free Server Boosts'
     ]
   }
 ];
+
+/* ========================================================
+   FULL NITRO PROFILE EFFECTS OVERLAY RENDERER
+======================================================== */
+const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: ProfileEffect; isUnlocked: boolean }) => {
+  if (effect === 'none' || !isUnlocked) return null;
+
+  if (effect === 'magic_spells') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.9, 1.05, 0.9] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+          className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-500/30 via-purple-500/20 to-transparent blur-md"
+        />
+        <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-cyan-300 rounded-full blur-xs animate-ping" />
+        <div className="absolute top-1/2 right-1/4 w-4 h-4 bg-purple-300 rounded-full blur-xs animate-ping" style={{ animationDelay: '1s' }} />
+      </div>
+    );
+  }
+
+  if (effect === 'autumn_leaves') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        <div className="w-full h-full opacity-40 bg-[radial-gradient(#f59e0b_1.5px,transparent_1.5px)] [background-size:24px_24px] animate-pulse" />
+      </div>
+    );
+  }
+
+  if (effect === 'neon_glitch') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden mix-blend-screen opacity-35">
+        <div className="w-full h-full bg-gradient-to-b from-cyan-500/20 via-transparent to-pink-500/20 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (effect === 'dragon_fire') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        <div className="w-full h-full bg-gradient-to-t from-orange-600/30 via-red-600/10 to-transparent animate-pulse" />
+      </div>
+    );
+  }
+
+  if (effect === 'sakura_breeze') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        <div className="w-full h-full opacity-40 bg-[radial-gradient(#f472b6_1.5px,transparent_1.5px)] [background-size:20px_20px] animate-pulse" />
+      </div>
+    );
+  }
+
+  return null;
+});
+ProfileEffectOverlay.displayName = 'ProfileEffectOverlay';
 
 /* ========================================================
    AVATAR DECORATION RENDERER WITH MOTION
@@ -254,7 +317,9 @@ export function UserProfileCard({
     handle: '@ram',
     verified: true,
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+    animatedAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
+    animatedBanner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
     bio: 'Full-stack AI systems architect & Discord Nitro Booster ✨ Building MNC-grade web apps with Next.js, Tailwind CSS & Radix UI primitives.',
     location: 'San Francisco, CA',
     customStatus: '🎮 Streaming Next.js + Radix UI Primitives',
@@ -263,11 +328,12 @@ export function UserProfileCard({
     themeColor: '#5865F2',
     avatarDecoration: 'neon',
     bannerEffect: 'nebula',
+    profileEffect: 'magic_spells',
     nitroLevel: 'level3',
     subscriptionTier: 'nitro_pro',
     badges: [
       { id: 'b1', name: 'Server Booster (Level 3)', iconName: 'Zap', color: 'text-pink-400 bg-pink-950/60 border-pink-500/40', description: 'Boosting servers since 2022' },
-      { id: 'b2', name: 'Nitro Subscriber', iconName: 'Crown', color: 'text-amber-400 bg-amber-950/60 border-amber-500/40', description: 'Discord Nitro Perks Active' },
+      { id: 'b2', name: 'Nitro Pro Subscriber', iconName: 'Crown', color: 'text-amber-400 bg-amber-950/60 border-amber-500/40', description: 'Full Discord Nitro Pro Active' },
       { id: 'b3', name: 'Early Supporter', iconName: 'Sparkles', color: 'text-cyan-400 bg-cyan-950/60 border-cyan-500/40', description: 'Early Nitro Supporter Badge' },
       { id: 'b4', name: 'Active Developer', iconName: 'ShieldCheck', color: 'text-emerald-400 bg-emerald-950/60 border-emerald-500/40', description: 'Verified Bot Developer' }
     ],
@@ -279,12 +345,19 @@ export function UserProfileCard({
       boostCount: 12,
       nextLevelBoosts: 14
     },
-    // Server Specific Profile
+    // Server Specific Profile & Server Level 1-3 Boost Overrides
     serverName: 'Next.js MNC Guild 🛡️',
+    serverIcon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
+    animatedServerIcon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
     serverAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     serverBanner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80',
+    animatedServerBanner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80',
     serverNickname: 'Ram [Lead Architect]',
-    serverRoles: ['@Core Lead', '@MNC Architect', '@Nitro Booster']
+    serverRoles: [
+      { id: 'r1', name: '@Core Lead', colorGradient: 'from-amber-400 via-pink-400 to-purple-400', animated: true },
+      { id: 'r2', name: '@MNC Architect', colorGradient: 'from-cyan-400 to-blue-500', animated: true },
+      { id: 'r3', name: '@Nitro Booster', colorGradient: 'from-pink-500 to-rose-500', animated: false }
+    ]
   },
   onUpdateProfile
 }: UserProfileCardProps) {
@@ -301,6 +374,7 @@ export function UserProfileCard({
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
+  const [isAvatarHovered, setIsAvatarHovered] = useState(false);
 
   // Super Reaction Burst Particles
   const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -312,6 +386,7 @@ export function UserProfileCard({
   const [editStatus, setEditStatus] = useState(profile.customStatus || '');
   const [editDecoration, setEditDecoration] = useState<AvatarDecoration>(profile.avatarDecoration);
   const [editBannerEffect, setEditBannerEffect] = useState<BannerEffect>(profile.bannerEffect);
+  const [editProfileEffect, setEditProfileEffect] = useState<ProfileEffect>(profile.profileEffect || 'magic_spells');
 
   // Feature Lock Helpers
   const isNitroPro = subscriptionTier === 'nitro_pro';
@@ -328,6 +403,7 @@ export function UserProfileCard({
           setEditStatus(updated.customStatus || '');
           setEditDecoration(updated.avatarDecoration);
           setEditBannerEffect(updated.bannerEffect);
+          setEditProfileEffect(updated.profileEffect || 'magic_spells');
           return updated;
         });
         if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
@@ -354,7 +430,7 @@ export function UserProfileCard({
     setTimeout(() => setNotification(null), 2500);
   }, []);
 
-  // Web Audio Synthesizer Engine with Memory Leak Prevention
+  // Web Audio Synthesizer Engine with Memory Leak Cleanup
   const playHapticSound = useCallback((freq = 520, type: OscillatorType = 'sine') => {
     if (!soundEnabled) return;
     try {
@@ -414,6 +490,7 @@ export function UserProfileCard({
         subscriptionTier: tier,
         avatarDecoration: hasNitroPro ? prev.avatarDecoration : 'none',
         bannerEffect: hasNitroPro ? prev.bannerEffect : 'none',
+        profileEffect: hasNitroPro ? prev.profileEffect : 'none',
         badges: updatedBadges
       };
     });
@@ -457,13 +534,14 @@ export function UserProfileCard({
       bio: editBio.trim() || profile.bio,
       customStatus: editStatus.trim(),
       avatarDecoration: isNitroPro ? editDecoration : 'none',
-      bannerEffect: isNitroPro ? editBannerEffect : 'none'
+      bannerEffect: isNitroPro ? editBannerEffect : 'none',
+      profileEffect: isNitroPro ? editProfileEffect : 'none'
     };
     setProfile(updated);
     if (onUpdateProfile) onUpdateProfile(updated);
     setIsSettingsOpen(false);
     showToast('Nitro Profile Settings Saved to IndexedDB! ✨');
-  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
+  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, editProfileEffect, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
 
   // Mock Data
   const mockPosts: PostItem[] = useMemo(() => [
@@ -573,11 +651,14 @@ export function UserProfileCard({
 
         </div>
 
-        {/* MAIN PROFILE CARD WITH NITRO AURORA BORDER FLARE */}
+        {/* MAIN PROFILE CARD WITH FULL NITRO PROFILE EFFECT OVERLAY */}
         <div className={`bg-white dark:bg-slate-900 border rounded-3xl overflow-hidden shadow-2xl transition-all relative ${
           isNitroPro ? 'border-purple-500/80 shadow-purple-500/20' : 'border-slate-200 dark:border-slate-800'
         }`}>
           
+          {/* Full Nitro Programmatic Profile Effect (Magic Spells / Glitch / Autumn Leaves) */}
+          <ProfileEffectOverlay effect={profile.profileEffect || 'magic_spells'} isUnlocked={isNitroPro} />
+
           {/* Animated Particles Explosion Overlay */}
           {particles.map(p => (
             <motion.span
@@ -592,11 +673,11 @@ export function UserProfileCard({
             </motion.span>
           ))}
 
-          {/* COVER BANNER SECTION WITH BANNER EFFECTS */}
+          {/* COVER BANNER SECTION WITH ANIMATED GIF/MP4 BANNER */}
           <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-slate-950">
             <BannerEffectOverlay effect={profile.bannerEffect} isUnlocked={isNitroPro} />
             <img
-              src={currentBanner}
+              src={isNitroPro && profile.animatedBanner ? profile.animatedBanner : currentBanner}
               alt="Profile Cover Banner"
               loading="eager"
               decoding="async"
@@ -608,7 +689,7 @@ export function UserProfileCard({
             <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-900/80 text-amber-300 border border-amber-500/40 backdrop-blur-md shadow-lg">
                 <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                {isNitroPro ? 'Nitro Level 3 Boosted' : 'Free User Profile'}
+                {isNitroPro ? 'Full Nitro Pro Active' : 'Free User Profile'}
               </span>
               {isNitroPro && (
                 <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-950/80 text-purple-300 border border-purple-500/40 backdrop-blur-md">
@@ -632,21 +713,23 @@ export function UserProfileCard({
             </div>
           </div>
 
-          {/* PROFILE HEADER & AVATAR SECTION */}
+          {/* PROFILE HEADER & ANIMATED AVATAR SECTION */}
           <div className="px-6 sm:px-10 pb-6 relative pt-0">
             
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-6">
               
-              {/* Avatar with Nitro Decoration Ring & 3D Tilt Hover */}
+              {/* Animated Avatar GIF/APNG with Hover Swap & Shop Decoration */}
               <motion.div 
                 whileHover={{ scale: 1.05, rotate: 2 }}
                 transition={{ type: 'spring', stiffness: 300 }}
+                onMouseEnter={() => setIsAvatarHovered(true)}
+                onMouseLeave={() => setIsAvatarHovered(false)}
                 className="relative group self-start sm:self-auto z-20"
               >
                 <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full ring-4 ring-white dark:ring-slate-900 shadow-2xl bg-slate-800">
                   <AvatarDecorationFrame decoration={profile.avatarDecoration} isUnlocked={isNitroPro} />
                   <img
-                    src={profile.avatar}
+                    src={(isNitroPro || isAvatarHovered) && profile.animatedAvatar ? profile.animatedAvatar : profile.avatar}
                     alt={currentDisplayName}
                     loading="eager"
                     decoding="async"
@@ -796,21 +879,50 @@ export function UserProfileCard({
                           />
                         </div>
 
+                        {/* Programmatic Profile Effect Picker */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">About Me Bio</label>
-                          <textarea
-                            value={editBio}
-                            onChange={(e) => setEditBio(e.target.value)}
-                            rows={3}
-                            className="w-full bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-purple-500 font-medium"
-                          />
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Full Nitro Profile Effects</label>
+                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Full Nitro</span>}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'none', label: 'None', emoji: '⚪' },
+                              { id: 'magic_spells', label: 'Magic Spells', emoji: '🔮' },
+                              { id: 'autumn_leaves', label: 'Autumn Leaves', emoji: '🍂' },
+                              { id: 'neon_glitch', label: 'Neon Glitch', emoji: '⚡' },
+                              { id: 'dragon_fire', label: 'Dragon Fire', emoji: '🔥' },
+                              { id: 'sakura_breeze', label: 'Sakura Breeze', emoji: '🌸' }
+                            ].map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  if (!isNitroPro && item.id !== 'none') {
+                                    showToast('🔒 Requires Full Nitro Subscription');
+                                    setIsSubscriptionModalOpen(true);
+                                    return;
+                                  }
+                                  setEditProfileEffect(item.id as ProfileEffect);
+                                }}
+                                className={`p-2 rounded-xl text-xs font-medium border flex items-center gap-1.5 justify-center cursor-pointer transition ${
+                                  editProfileEffect === item.id 
+                                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-600 font-bold' 
+                                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                }`}
+                              >
+                                <span>{item.emoji}</span>
+                                <span>{item.label}</span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         {/* Avatar Decoration Picker */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Nitro Avatar Decoration</label>
-                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Nitro Pro</span>}
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Shop Avatar Decorations</label>
+                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Full Nitro</span>}
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             {[
@@ -828,7 +940,7 @@ export function UserProfileCard({
                                 type="button"
                                 onClick={() => {
                                   if (!isNitroPro && item.id !== 'none') {
-                                    showToast('🔒 Requires Nitro Pro Subscription');
+                                    showToast('🔒 Requires Full Nitro Subscription');
                                     setIsSubscriptionModalOpen(true);
                                     return;
                                   }
@@ -850,8 +962,8 @@ export function UserProfileCard({
                         {/* Banner Effect Picker */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Nitro Banner Effect</label>
-                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Nitro Pro</span>}
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Nitro Animated Banner</label>
+                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Full Nitro</span>}
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             {[
@@ -865,7 +977,7 @@ export function UserProfileCard({
                                 type="button"
                                 onClick={() => {
                                   if (!isNitroPro && item.id !== 'none') {
-                                    showToast('🔒 Requires Nitro Pro Subscription');
+                                    showToast('🔒 Requires Full Nitro Subscription');
                                     setIsSubscriptionModalOpen(true);
                                     return;
                                   }
@@ -930,6 +1042,25 @@ export function UserProfileCard({
                 )}
               </div>
             </div>
+
+            {/* SERVER LEVEL 1-3 BOOST FEATURES ROW (Holographic Gradient Roles) */}
+            {profileContext === 'server' && profile.serverRoles && (
+              <div className="mb-4 flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-400">Server Roles (Level 1 Revamp):</span>
+                {profile.serverRoles.map(role => (
+                  <span
+                    key={role.id}
+                    className={`px-3 py-1 rounded-full text-xs font-extrabold shadow-sm border border-slate-700/40 ${
+                      role.animated 
+                        ? `bg-gradient-to-r ${role.colorGradient} bg-clip-text text-transparent animate-pulse` 
+                        : 'text-purple-400 bg-purple-950/40'
+                    }`}
+                  >
+                    {role.name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Nitro Boost Level Progression Widget */}
             <div className="mb-4 p-3 bg-purple-50/80 dark:bg-purple-950/40 rounded-2xl border border-purple-200/60 dark:border-purple-900/60 space-y-1.5">
@@ -1058,6 +1189,18 @@ export function UserProfileCard({
                   </Tabs.Trigger>
 
                   <Tabs.Trigger
+                    value="server_preview"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      activeTab === 'server_preview'
+                        ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-md'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4 text-pink-500" />
+                    <span>Server Boost Preview</span>
+                  </Tabs.Trigger>
+
+                  <Tabs.Trigger
                     value="media"
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                       activeTab === 'media'
@@ -1155,6 +1298,77 @@ export function UserProfileCard({
                 ))}
               </Tabs.Content>
 
+              {/* SERVER BOOST LEVEL 1-3 PREVIEW TAB */}
+              <Tabs.Content value="server_preview" className="outline-none space-y-4">
+                <div className="bg-slate-50/80 dark:bg-slate-800/40 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 space-y-6">
+                  
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-pink-500 fill-pink-500" />
+                      Server Boost Level 1-3 Community Container Animations
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Applying Nitro Server Boosts unlocks physical animations for the entire community server sidebar & header:
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    
+                    {/* Level 1: Animated Server Sidebar Icon */}
+                    <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">Level 1 Boost</span>
+                        <Crown className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-purple-500 animate-spin" style={{ animationDuration: '10s' }}>
+                          <img src={profile.animatedServerIcon || profile.serverIcon} alt="Animated Server Icon" className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white">Animated Server Bubble</div>
+                          <div className="text-[10px] text-slate-400">Looping GIF on sidebar hover</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Level 1: Holographic Gradient Roles */}
+                    <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-purple-500 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 rounded-full">Level 1 Revamp</span>
+                        <Award className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-slate-900 dark:text-white mb-1">Animated Gradient Roles</div>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="text-xs font-extrabold bg-gradient-to-r from-amber-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
+                            @Core Lead
+                          </span>
+                          <span className="text-xs font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent animate-pulse">
+                            @MNC Architect
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Level 3: Animated Server Sidebar Banner */}
+                    <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-pink-500 bg-pink-50 dark:bg-pink-950 px-2 py-0.5 rounded-full">Level 3 Boost</span>
+                        <Zap className="w-4 h-4 text-pink-500 fill-pink-500" />
+                      </div>
+                      <div className="h-16 rounded-xl overflow-hidden relative bg-slate-950">
+                        <img src={profile.animatedServerBanner || profile.serverBanner} alt="Animated Server Banner" className="w-full h-full object-cover animate-pulse" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[11px] font-bold text-white">
+                          Animated Server Header Banner
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+              </Tabs.Content>
+
               {/* SOUNDBOARD TAB CONTENT */}
               <Tabs.Content value="soundboard" className="outline-none">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -1222,7 +1436,7 @@ export function UserProfileCard({
                 <div className="text-center max-w-xl mx-auto space-y-2 mb-6">
                   <h3 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center justify-center gap-2">
                     <Crown className="w-6 h-6 text-amber-400 fill-amber-400" />
-                    Upgrade Your Profile to Discord Nitro
+                    Upgrade Your Profile to Full Discord Nitro
                   </h3>
                   <p className="text-xs text-slate-500">
                     Selecting a subscription plan instantly unlocks all avatar decorations, banner effects, soundboard clips, and persists state in IndexedDB!
