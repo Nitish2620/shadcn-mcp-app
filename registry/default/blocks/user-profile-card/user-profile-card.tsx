@@ -320,7 +320,16 @@ export function UserProfileCard({
   useEffect(() => {
     idbLoadProfile('userProfileState').then(stored => {
       if (stored) {
-        setProfile(prev => ({ ...prev, ...stored }));
+        setProfile(prev => {
+          const updated = { ...prev, ...stored };
+          setEditName(updated.name);
+          setEditHandle(updated.handle);
+          setEditBio(updated.bio);
+          setEditStatus(updated.customStatus || '');
+          setEditDecoration(updated.avatarDecoration);
+          setEditBannerEffect(updated.bannerEffect);
+          return updated;
+        });
         if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
         if (stored.stats?.boostCount !== undefined) setBoostCount(stored.stats.boostCount);
         if (stored.stats?.likes !== undefined) setLikesCount(stored.stats.likes);
@@ -345,7 +354,7 @@ export function UserProfileCard({
     setTimeout(() => setNotification(null), 2500);
   }, []);
 
-  // Web Audio Synthesizer Engine
+  // Web Audio Synthesizer Engine with Memory Leak Prevention
   const playHapticSound = useCallback((freq = 520, type: OscillatorType = 'sine') => {
     if (!soundEnabled) return;
     try {
@@ -358,6 +367,9 @@ export function UserProfileCard({
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
       osc.connect(gain);
       gain.connect(ctx.destination);
+      osc.onended = () => {
+        try { ctx.close(); } catch {}
+      };
       osc.start();
       osc.stop(ctx.currentTime + 0.18);
     } catch {}
@@ -377,11 +389,34 @@ export function UserProfileCard({
     }, 1000);
   }, []);
 
-  // Select Subscription Plan Trigger
+  // Select Subscription Plan Trigger with Feature Gating Reset
   const handleSelectSubscription = useCallback((tier: SubscriptionTier) => {
     playHapticSound(900, 'triangle');
     setSubscriptionTier(tier);
-    setProfile(prev => ({ ...prev, subscriptionTier: tier }));
+    setProfile(prev => {
+      const hasNitroPro = tier === 'nitro_pro';
+      const hasNitroBasic = tier === 'nitro_basic' || hasNitroPro;
+      
+      // Dynamically update Nitro Subscriber badge
+      const updatedBadges = prev.badges.filter(b => b.id !== 'b2');
+      if (hasNitroBasic) {
+        updatedBadges.push({
+          id: 'b2',
+          name: hasNitroPro ? 'Nitro Pro Subscriber' : 'Nitro Basic',
+          iconName: 'Crown',
+          color: hasNitroPro ? 'text-amber-400 bg-amber-950/60 border-amber-500/40' : 'text-blue-400 bg-blue-950/60 border-blue-500/40',
+          description: hasNitroPro ? 'Full Discord Nitro Pro Active' : 'Nitro Basic Perks Active'
+        });
+      }
+
+      return {
+        ...prev,
+        subscriptionTier: tier,
+        avatarDecoration: hasNitroPro ? prev.avatarDecoration : 'none',
+        bannerEffect: hasNitroPro ? prev.bannerEffect : 'none',
+        badges: updatedBadges
+      };
+    });
     setIsSubscriptionModalOpen(false);
     const plan = SUBSCRIPTION_PLANS.find(p => p.id === tier);
     showToast(`Subscribed to ${plan?.name}! Features Unlocked & Saved to IndexedDB 🚀`);
