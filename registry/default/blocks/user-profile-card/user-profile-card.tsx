@@ -32,7 +32,9 @@ import {
   MoreHorizontal,
   Layers,
   Award,
-  Palette
+  Palette,
+  Upload,
+  Camera
 } from 'lucide-react';
 import type { 
   UserProfileData, 
@@ -871,6 +873,10 @@ export function UserProfileCard({
   const [editBannerEffect, setEditBannerEffect] = useState<BannerEffect>(profile.bannerEffect);
   const [editProfileEffect, setEditProfileEffect] = useState<ProfileEffect>(profile.profileEffect || 'hypesquad_explosion');
   const [editTheme, setEditTheme] = useState<ProfileTheme>(profileTheme);
+  const [editAvatar, setEditAvatar] = useState(profile.avatar);
+  const [editAnimatedAvatar, setEditAnimatedAvatar] = useState(profile.animatedAvatar || '');
+  const [editBanner, setEditBanner] = useState(profile.banner);
+  const [editAnimatedBanner, setEditAnimatedBanner] = useState(profile.animatedBanner || '');
 
   // Feature Lock Helpers
   const isNitroPro = subscriptionTier === 'nitro_pro';
@@ -1025,6 +1031,73 @@ export function UserProfileCard({
     showToast('Nitro Super Boosted Level 3! 🚀✨ (+50 Likes)');
   }, [isNitroPro, playHapticSound, triggerParticleBlast, showToast]);
 
+  // File Upload Handlers with Discord Subscription Limit Validation
+  const handleAvatarFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isGif = file.type === 'image/gif' || file.name.endsWith('.gif') || file.name.endsWith('.apng');
+    const sizeMb = file.size / (1024 * 1024);
+    const maxMb = subscriptionTier === 'nitro_pro' ? 500 : subscriptionTier === 'nitro_basic' ? 50 : 8;
+
+    if (sizeMb > maxMb) {
+      showToast(`❌ File size exceeds ${maxMb}MB limit for ${subscriptionTier.toUpperCase()} plan!`);
+      return;
+    }
+
+    if (isGif && subscriptionTier !== 'nitro_pro') {
+      showToast('🔒 Animated GIF avatars require Full Nitro Pro subscription ($9.99/mo)');
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (isGif) {
+        setEditAnimatedAvatar(result);
+        setEditAvatar(result);
+      } else {
+        setEditAvatar(result);
+      }
+      showToast('Avatar image loaded into preview! ✨');
+    };
+    reader.readAsDataURL(file);
+  }, [subscriptionTier, showToast]);
+
+  const handleBannerFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isGif = file.type === 'image/gif' || file.name.endsWith('.gif') || file.name.endsWith('.apng');
+    const sizeMb = file.size / (1024 * 1024);
+    const maxMb = subscriptionTier === 'nitro_pro' ? 500 : subscriptionTier === 'nitro_basic' ? 50 : 8;
+
+    if (sizeMb > maxMb) {
+      showToast(`❌ File size exceeds ${maxMb}MB limit for ${subscriptionTier.toUpperCase()} plan!`);
+      return;
+    }
+
+    if (isGif && subscriptionTier !== 'nitro_pro') {
+      showToast('🔒 Animated GIF cover banners require Full Nitro Pro subscription ($9.99/mo)');
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (isGif) {
+        setEditAnimatedBanner(result);
+        setEditBanner(result);
+      } else {
+        setEditBanner(result);
+      }
+      showToast('Cover Banner image loaded into preview! ✨');
+    };
+    reader.readAsDataURL(file);
+  }, [subscriptionTier, showToast]);
+
   // Save Settings
   const handleSaveSettings = useCallback(() => {
     playHapticSound(750);
@@ -1036,6 +1109,10 @@ export function UserProfileCard({
       bio: editBio.trim() || profile.bio,
       customStatus: editStatus.trim(),
       profileTheme: editTheme,
+      avatar: editAvatar,
+      animatedAvatar: isNitroPro ? editAnimatedAvatar : undefined,
+      banner: editBanner,
+      animatedBanner: isNitroPro ? editAnimatedBanner : undefined,
       avatarDecoration: isNitroPro ? editDecoration : 'none',
       bannerEffect: isNitroPro ? editBannerEffect : 'none',
       profileEffect: isNitroPro ? editProfileEffect : 'none'
@@ -1043,8 +1120,8 @@ export function UserProfileCard({
     setProfile(updated);
     if (onUpdateProfile) onUpdateProfile(updated);
     setIsSettingsOpen(false);
-    showToast('Nitro Profile Settings & Theme Saved to IndexedDB! ✨');
-  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, editProfileEffect, editTheme, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
+    showToast('Nitro Profile Settings & Uploaded Media Saved to IndexedDB! ✨');
+  }, [editName, editHandle, editBio, editStatus, editTheme, editAvatar, editAnimatedAvatar, editBanner, editAnimatedBanner, editDecoration, editBannerEffect, editProfileEffect, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
 
   // Mock Data
   const mockPosts: PostItem[] = useMemo(() => [
@@ -1351,35 +1428,105 @@ export function UserProfileCard({
                       </div>
 
                       <div className="space-y-4">
+                        {/* Avatar Image & GIF Uploader with Tier Validation */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Display Name</label>
-                          <input
-                            type="text"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-full bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-purple-500 font-medium"
-                          />
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                              <Camera className="w-3.5 h-3.5 text-purple-500" />
+                              <span>Profile Avatar Image / GIF</span>
+                            </label>
+                            <span className="text-[10px] font-mono text-purple-500 font-bold">
+                              Limit: {subscriptionTier === 'nitro_pro' ? '500MB (GIF Allowed)' : subscriptionTier === 'nitro_basic' ? '50MB Static' : '8MB Static'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+                              <img src={editAvatar} alt="Avatar Upload Preview" className="w-full h-full object-cover" />
+                            </div>
+
+                            <label className="flex-1 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 rounded-2xl p-3 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
+                              <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                                <Upload className="w-4 h-4 text-purple-500" />
+                                <span>Upload Avatar (Static/GIF)</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {isNitroPro ? 'PNG, JPG, WEBP, GIF, APNG (Max 500MB)' : 'PNG, JPG, WEBP (GIFs require Nitro Pro)'}
+                              </span>
+                              <input 
+                                type="file" 
+                                accept="image/png, image/jpeg, image/webp, image/gif, image/apng" 
+                                onChange={handleAvatarFileSelect}
+                                className="hidden" 
+                              />
+                            </label>
+                          </div>
                         </div>
 
+                        {/* Cover Banner Image & GIF Uploader with Tier Validation */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Handle</label>
-                          <input
-                            type="text"
-                            value={editHandle}
-                            onChange={(e) => setEditHandle(e.target.value)}
-                            className="w-full bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-purple-500 font-medium"
-                          />
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                              <ImageIcon className="w-3.5 h-3.5 text-pink-500" />
+                              <span>Profile Cover Banner Photo / GIF</span>
+                            </label>
+                            <span className="text-[10px] font-mono text-pink-500 font-bold">
+                              Limit: {subscriptionTier === 'nitro_pro' ? '500MB (GIF Allowed)' : subscriptionTier === 'nitro_basic' ? '50MB Static' : '8MB Static'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="h-16 rounded-2xl overflow-hidden bg-slate-950 relative border border-slate-700">
+                              <img src={editBanner} alt="Banner Upload Preview" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-[10px] text-white font-bold">
+                                Current Banner Preview
+                              </div>
+                            </div>
+
+                            <label className="block border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-pink-500 rounded-2xl p-3 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
+                              <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                                <Upload className="w-4 h-4 text-pink-500" />
+                                <span>Upload Cover Banner (Static/GIF)</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {isNitroPro ? 'Ultra HD Banner PNG, JPG, WEBP, GIF (Max 500MB)' : 'Standard Banner PNG, JPG (GIFs require Nitro Pro)'}
+                              </span>
+                              <input 
+                                type="file" 
+                                accept="image/png, image/jpeg, image/webp, image/gif, image/apng" 
+                                onChange={handleBannerFileSelect}
+                                className="hidden" 
+                              />
+                            </label>
+                          </div>
                         </div>
 
+                        {/* Quick Preset Anime & Cyberpunk GIF Media Selector */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nitro Custom Status</label>
-                          <input
-                            type="text"
-                            value={editStatus}
-                            onChange={(e) => setEditStatus(e.target.value)}
-                            placeholder="e.g. 🎮 Streaming Next.js + Radix UI"
-                            className="w-full bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-purple-500 font-medium"
-                          />
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Quick Anime & Cyberpunk Media Presets</span>
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { label: 'Cyberpunk Girl', avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&auto=format&fit=crop&q=80', banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80' },
+                              { label: 'Neon Tokyo', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80', banner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80' }
+                            ].map((preset, idx) => (
+                              <button
+                                key={`preset-media-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  setEditAvatar(preset.avatar);
+                                  setEditBanner(preset.banner);
+                                  showToast(`Loaded Preset: ${preset.label}`);
+                                }}
+                                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:border-purple-400 transition cursor-pointer flex items-center gap-2"
+                              >
+                                <img src={preset.avatar} alt={preset.label} className="w-6 h-6 rounded-full object-cover" />
+                                <span>{preset.label}</span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         {/* Custom HSL Theme Selector */}
