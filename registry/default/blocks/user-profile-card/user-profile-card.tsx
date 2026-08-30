@@ -31,7 +31,10 @@ import {
   CheckCircle,
   MoreHorizontal,
   Layers,
-  Award
+  Award,
+  Sun,
+  Radio,
+  Palette
 } from 'lucide-react';
 import type { 
   UserProfileData, 
@@ -39,6 +42,7 @@ import type {
   AvatarDecoration, 
   BannerEffect, 
   ProfileEffect, 
+  ProfileTheme,
   SubscriptionTier, 
   SubscriptionPlan, 
   ProfileTab, 
@@ -49,7 +53,7 @@ import type {
   ServerRole 
 } from './types';
 
-export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, SubscriptionTier, ProfileTab, ProfileContext, ServerRole };
+export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, ProfileTheme, SubscriptionTier, ProfileTab, ProfileContext, ServerRole };
 
 /* ========================================================
    INDEXEDDB AUTO-PERSISTENCE ENGINE FOR PROFILE & SUBSCRIPTION
@@ -139,8 +143,8 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     features: [
       'Looping GIF Animated Profile Avatar',
       'Looping GIF Animated Cover Banner',
-      'Full-Screen Programmatic Profile Effects (Magic Spells, Glitch, Autumn Leaves)',
-      'Shop Avatar Decorations (Gold Crown, Cyber Neon, Flame Aura)',
+      'Full-Screen Programmatic Profile Effects (Magic Spells, Glitch, Void, Lightning)',
+      'Shop Avatar Decorations (Solar Flare, Galaxy Warp, Cyber Neon, Flame Aura)',
       'Server Level 1 Animated Sidebar Server Icon',
       'Server Level 1 Holographic Animated Gradient Roles',
       'Server Level 3 Animated Sidebar Banner Slot',
@@ -202,6 +206,34 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
     );
   }
 
+  if (effect === 'cyber_matrix_stream') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden mix-blend-screen">
+        <div className="w-full h-full opacity-30 bg-[radial-gradient(#10b981_2px,transparent_2px)] [background-size:18px_18px] animate-pulse" />
+      </div>
+    );
+  }
+
+  if (effect === 'cosmic_void') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+          className="w-full h-full opacity-35 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/60 via-indigo-900/30 to-transparent blur-md"
+        />
+      </div>
+    );
+  }
+
+  if (effect === 'lightning_surge') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        <div className="w-full h-full bg-cyan-500/10 backdrop-blur-[1px] animate-pulse" />
+      </div>
+    );
+  }
+
   return null;
 });
 ProfileEffectOverlay.displayName = 'ProfileEffectOverlay';
@@ -252,6 +284,32 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
     );
   }
 
+  if (decoration === 'solar_flare') {
+    return (
+      <motion.div 
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
+        className="absolute -inset-3 rounded-full border-2 border-dashed border-amber-400 z-10 pointer-events-none shadow-[0_0_20px_rgba(251,191,36,0.95)]"
+      />
+    );
+  }
+
+  if (decoration === 'galaxy_warp') {
+    return (
+      <motion.div 
+        animate={{ scale: [1, 1.08, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+        className="absolute -inset-3 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-500 to-pink-500 opacity-80 blur-xs z-0 pointer-events-none"
+      />
+    );
+  }
+
+  if (decoration === 'holographic_glitch') {
+    return (
+      <div className="absolute -inset-2.5 rounded-full border-2 border-pink-500 animate-pulse z-10 pointer-events-none shadow-[0_0_16px_rgba(236,72,153,0.9)] opacity-90" />
+    );
+  }
+
   if (decoration === 'sakura') {
     return (
       <div className="absolute -inset-2 rounded-full border-2 border-pink-400 animate-pulse z-10 pointer-events-none shadow-[0_0_15px_rgba(244,114,182,0.8)] opacity-90" />
@@ -296,6 +354,20 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
     );
   }
 
+  if (effect === 'frostbite') {
+    return (
+      <div className="absolute inset-0 bg-cyan-500/10 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        <div className="w-full h-full opacity-40 bg-[radial-gradient(#06b6d4_1.5px,transparent_1.5px)] [background-size:16px_16px] animate-pulse" />
+      </div>
+    );
+  }
+
+  if (effect === 'lightning') {
+    return (
+      <div className="absolute inset-0 bg-indigo-500/15 backdrop-blur-[1px] pointer-events-none z-10 animate-pulse" />
+    );
+  }
+
   if (effect === 'sakura') {
     return (
       <div className="absolute inset-0 bg-pink-500/10 backdrop-blur-[1px] pointer-events-none z-10" />
@@ -324,9 +396,10 @@ export function UserProfileCard({
     customStatusEmoji: '✨',
     vanityUrl: 'discord.gg/ram',
     themeColor: '#5865F2',
-    avatarDecoration: 'neon',
+    profileTheme: 'blurple',
+    avatarDecoration: 'solar_flare',
     bannerEffect: 'nebula',
-    profileEffect: 'magic_spells',
+    profileEffect: 'cosmic_void',
     nitroLevel: 'level3',
     subscriptionTier: 'nitro_pro',
     badges: [
@@ -362,6 +435,7 @@ export function UserProfileCard({
   // Core Profile & Subscription State
   const [profile, setProfile] = useState<UserProfileData>(initialProfile);
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>(initialProfile.subscriptionTier || 'nitro_pro');
+  const [profileTheme, setProfileTheme] = useState<ProfileTheme>(initialProfile.profileTheme || 'blurple');
   const [profileContext, setProfileContext] = useState<ProfileContext>('global');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(initialProfile.stats.followers);
@@ -384,10 +458,22 @@ export function UserProfileCard({
   const [editStatus, setEditStatus] = useState(profile.customStatus || '');
   const [editDecoration, setEditDecoration] = useState<AvatarDecoration>(profile.avatarDecoration);
   const [editBannerEffect, setEditBannerEffect] = useState<BannerEffect>(profile.bannerEffect);
-  const [editProfileEffect, setEditProfileEffect] = useState<ProfileEffect>(profile.profileEffect || 'magic_spells');
+  const [editProfileEffect, setEditProfileEffect] = useState<ProfileEffect>(profile.profileEffect || 'cosmic_void');
+  const [editTheme, setEditTheme] = useState<ProfileTheme>(profileTheme);
 
   // Feature Lock Helpers
   const isNitroPro = subscriptionTier === 'nitro_pro';
+
+  // Theme Class Map
+  const themeClasses = useMemo(() => {
+    switch (profileTheme) {
+      case 'nitro_pink': return 'border-pink-500/80 shadow-pink-500/20';
+      case 'cyber_emerald': return 'border-emerald-500/80 shadow-emerald-500/20';
+      case 'solar_gold': return 'border-amber-500/80 shadow-amber-500/20';
+      case 'midnight_obsidian': return 'border-slate-700 shadow-slate-900/60';
+      default: return 'border-purple-500/80 shadow-purple-500/20';
+    }
+  }, [profileTheme]);
 
   // Auto-Hydration from IndexedDB
   useEffect(() => {
@@ -401,7 +487,11 @@ export function UserProfileCard({
           setEditStatus(updated.customStatus || '');
           setEditDecoration(updated.avatarDecoration);
           setEditBannerEffect(updated.bannerEffect);
-          setEditProfileEffect(updated.profileEffect || 'magic_spells');
+          setEditProfileEffect(updated.profileEffect || 'cosmic_void');
+          if (updated.profileTheme) {
+            setProfileTheme(updated.profileTheme);
+            setEditTheme(updated.profileTheme);
+          }
           return updated;
         });
         if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
@@ -417,11 +507,12 @@ export function UserProfileCard({
       idbSaveProfile('userProfileState', {
         ...profile,
         subscriptionTier,
+        profileTheme,
         stats: { ...profile.stats, boostCount, likes: likesCount }
       });
     }, 500);
     return () => clearTimeout(handler);
-  }, [profile, subscriptionTier, boostCount, likesCount]);
+  }, [profile, subscriptionTier, profileTheme, boostCount, likesCount]);
 
   const showToast = useCallback((msg: string) => {
     setNotification(msg);
@@ -452,7 +543,7 @@ export function UserProfileCard({
   // Particle Blast Trigger
   const triggerParticleBlast = useCallback((e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const newParticles = Array.from({ length: 12 }).map((_, i) => ({
+    const newParticles = Array.from({ length: 14 }).map((_, i) => ({
       id: Date.now() + i,
       x: e.clientX - rect.left + (Math.random() * 50 - 25),
       y: e.clientY - rect.top + (Math.random() * 50 - 25)
@@ -525,12 +616,14 @@ export function UserProfileCard({
   // Save Settings
   const handleSaveSettings = useCallback(() => {
     playHapticSound(750);
+    setProfileTheme(editTheme);
     const updated: UserProfileData = {
       ...profile,
       name: editName.trim() || profile.name,
       handle: editHandle.trim() || profile.handle,
       bio: editBio.trim() || profile.bio,
       customStatus: editStatus.trim(),
+      profileTheme: editTheme,
       avatarDecoration: isNitroPro ? editDecoration : 'none',
       bannerEffect: isNitroPro ? editBannerEffect : 'none',
       profileEffect: isNitroPro ? editProfileEffect : 'none'
@@ -538,8 +631,8 @@ export function UserProfileCard({
     setProfile(updated);
     if (onUpdateProfile) onUpdateProfile(updated);
     setIsSettingsOpen(false);
-    showToast('Nitro Profile Settings Saved to IndexedDB! ✨');
-  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, editProfileEffect, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
+    showToast('Nitro Profile Settings & Theme Saved to IndexedDB! ✨');
+  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, editProfileEffect, editTheme, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
 
   // Mock Data
   const mockPosts: PostItem[] = useMemo(() => [
@@ -649,13 +742,13 @@ export function UserProfileCard({
 
         </div>
 
-        {/* MAIN PROFILE CARD WITH FULL NITRO PROFILE EFFECT OVERLAY */}
+        {/* MAIN PROFILE CARD WITH DYNAMIC HSL THEME & PROFILE EFFECTS */}
         <div className={`bg-white dark:bg-slate-900 border rounded-3xl overflow-hidden shadow-2xl transition-all relative ${
-          isNitroPro ? 'border-purple-500/80 shadow-purple-500/20' : 'border-slate-200 dark:border-slate-800'
+          isNitroPro ? themeClasses : 'border-slate-200 dark:border-slate-800'
         }`}>
           
-          {/* Full Nitro Programmatic Profile Effect (Magic Spells / Glitch / Autumn Leaves) */}
-          <ProfileEffectOverlay effect={profile.profileEffect || 'magic_spells'} isUnlocked={isNitroPro} />
+          {/* Full Nitro Programmatic Profile Effect (Magic Spells, Glitch, Cosmic Void, Lightning) */}
+          <ProfileEffectOverlay effect={profile.profileEffect || 'cosmic_void'} isUnlocked={isNitroPro} />
 
           {/* Animated Particles Explosion Overlay */}
           {particles.map(p => (
@@ -877,6 +970,37 @@ export function UserProfileCard({
                           />
                         </div>
 
+                        {/* Custom HSL Theme Selector */}
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                            <Palette className="w-3.5 h-3.5 text-purple-500" />
+                            <span>Nitro Custom HSL Theme</span>
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'blurple', label: 'Blurple', color: 'bg-indigo-600' },
+                              { id: 'nitro_pink', label: 'Nitro Pink', color: 'bg-pink-600' },
+                              { id: 'cyber_emerald', label: 'Cyber Emerald', color: 'bg-emerald-600' },
+                              { id: 'solar_gold', label: 'Solar Gold', color: 'bg-amber-500' },
+                              { id: 'midnight_obsidian', label: 'Obsidian', color: 'bg-slate-900' }
+                            ].map(theme => (
+                              <button
+                                key={theme.id}
+                                type="button"
+                                onClick={() => setEditTheme(theme.id as ProfileTheme)}
+                                className={`p-2 rounded-xl text-xs font-bold flex items-center gap-2 border cursor-pointer transition ${
+                                  editTheme === theme.id 
+                                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-600' 
+                                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                }`}
+                              >
+                                <span className={`w-3.5 h-3.5 rounded-full ${theme.color}`} />
+                                <span>{theme.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         {/* Programmatic Profile Effect Picker */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -887,10 +1011,10 @@ export function UserProfileCard({
                             {[
                               { id: 'none', label: 'None', emoji: '⚪' },
                               { id: 'magic_spells', label: 'Magic Spells', emoji: '🔮' },
-                              { id: 'autumn_leaves', label: 'Autumn Leaves', emoji: '🍂' },
-                              { id: 'neon_glitch', label: 'Neon Glitch', emoji: '⚡' },
-                              { id: 'dragon_fire', label: 'Dragon Fire', emoji: '🔥' },
-                              { id: 'sakura_breeze', label: 'Sakura Breeze', emoji: '🌸' }
+                              { id: 'cosmic_void', label: 'Cosmic Void', emoji: '🌌' },
+                              { id: 'cyber_matrix_stream', label: 'Matrix Stream', emoji: '💻' },
+                              { id: 'lightning_surge', label: 'Lightning Surge', emoji: '⚡' },
+                              { id: 'dragon_fire', label: 'Dragon Fire', emoji: '🔥' }
                             ].map((item) => (
                               <button
                                 key={item.id}
@@ -919,19 +1043,19 @@ export function UserProfileCard({
                         {/* Avatar Decoration Picker */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Shop Avatar Decorations</label>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Shop Avatar Animations</label>
                             {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Full Nitro</span>}
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             {[
                               { id: 'none', label: 'None', emoji: '⚪' },
+                              { id: 'solar_flare', label: 'Solar Flare', emoji: '☀️' },
+                              { id: 'galaxy_warp', label: 'Galaxy Warp', emoji: '🔮' },
+                              { id: 'holographic_glitch', label: 'Cyber Glitch', emoji: '⚡' },
                               { id: 'crown', label: 'Gold Crown', emoji: '👑' },
                               { id: 'neon', label: 'Cyber Neon', emoji: '⚡' },
-                              { id: 'sparkle', label: 'Cosmic Sparkle', emoji: '✨' },
                               { id: 'flame', label: 'Dragon Flame', emoji: '🔥' },
-                              { id: 'diamond', label: 'Diamond Aura', emoji: '💎' },
-                              { id: 'sakura', label: 'Sakura Petals', emoji: '🌸' },
-                              { id: 'matrix', label: 'Matrix Code', emoji: '💻' }
+                              { id: 'diamond', label: 'Diamond Aura', emoji: '💎' }
                             ].map((item) => (
                               <button
                                 key={item.id}
@@ -966,9 +1090,9 @@ export function UserProfileCard({
                           <div className="grid grid-cols-2 gap-2">
                             {[
                               { id: 'none', label: 'None', emoji: '🚫' },
-                              { id: 'nebula', label: 'Cosmic Nebula', emoji: '🌌' },
-                              { id: 'matrix', label: 'Cyber Matrix', emoji: '💻' },
-                              { id: 'gold_dust', label: 'Gold Dust Shimmer', emoji: '✨' }
+                              { id: 'frostbite', label: 'Frostbite Blizzard', emoji: '❄️' },
+                              { id: 'lightning', label: 'Lightning Arc', emoji: '⚡' },
+                              { id: 'nebula', label: 'Cosmic Nebula', emoji: '🌌' }
                             ].map((item) => (
                               <button
                                 key={item.id}

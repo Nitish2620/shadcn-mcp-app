@@ -1,8 +1,30 @@
-export type AvatarDecoration = 'none' | 'crown' | 'neon' | 'sparkle' | 'flame' | 'diamond' | 'sakura' | 'matrix';
+export type AvatarDecoration = 
+  | 'none' 
+  | 'crown' 
+  | 'neon' 
+  | 'sparkle' 
+  | 'flame' 
+  | 'diamond' 
+  | 'sakura' 
+  | 'matrix'
+  | 'solar_flare'
+  | 'galaxy_warp'
+  | 'holographic_glitch';
 
-export type BannerEffect = 'none' | 'nebula' | 'matrix' | 'gold_dust' | 'sakura';
+export type BannerEffect = 'none' | 'nebula' | 'matrix' | 'gold_dust' | 'sakura' | 'frostbite' | 'lightning';
 
-export type ProfileEffect = 'none' | 'magic_spells' | 'autumn_leaves' | 'neon_glitch' | 'dragon_fire' | 'sakura_breeze';
+export type ProfileEffect = 
+  | 'none' 
+  | 'magic_spells' 
+  | 'autumn_leaves' 
+  | 'neon_glitch' 
+  | 'dragon_fire' 
+  | 'sakura_breeze'
+  | 'cyber_matrix_stream'
+  | 'cosmic_void'
+  | 'lightning_surge';
+
+export type ProfileTheme = 'blurple' | 'nitro_pink' | 'cyber_emerald' | 'solar_gold' | 'midnight_obsidian';
 
 export type NitroLevel = 'none' | 'level1' | 'level2' | 'level3';
 
@@ -92,6 +114,7 @@ export interface UserProfileData {
   customStatusEmoji?: string;
   vanityUrl?: string;
   themeColor: string;
+  profileTheme: ProfileTheme;
   avatarDecoration: AvatarDecoration;
   bannerEffect: BannerEffect;
   profileEffect: ProfileEffect;
@@ -99,7 +122,7 @@ export interface UserProfileData {
   subscriptionTier: SubscriptionTier;
   badges: ProfileBadge[];
   stats: UserProfileStats;
-  // Server-Specific Profile Overrides (Level 1 - Level 3 Boost Features)
+  // Server-Specific Profile Overrides
   serverName?: string;
   serverIcon?: string;
   animatedServerIcon?: string;
