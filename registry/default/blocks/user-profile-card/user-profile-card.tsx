@@ -149,8 +149,8 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     features: [
       'Looping GIF Animated Profile Avatar',
       'Looping GIF Animated Cover Banner',
-      'Full-Screen Programmatic Profile Effects (Anime Power, Cyber Matrix, Retrowave Sunset)',
-      'Shop Avatar Decorations (Solar Flare, Anime Aura, Cyber Hacker Void, Celestial Orbit)',
+      'Full-Screen Programmatic 3D Profile Effects (Anime Power, Cyber Matrix, Retrowave Sunset)',
+      'Shop 3D Avatar Animations (Solar Flare, Anime Aura, Cyber Hacker Void, Celestial Orbit)',
       'Server Level 1 Animated Sidebar Server Icon',
       'Server Level 1 Holographic Animated Gradient Roles',
       'Server Level 3 Animated Sidebar Banner Slot',
@@ -160,7 +160,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 ];
 
 /* ========================================================
-   HIGH-IMPACT NITRO PROFILE EFFECTS OVERLAY (GPU ACCELERATED PARTICLES)
+   HIGH-IMPACT 3D ANIME & SCI-FI PROFILE ENTRANCE EFFECTS (SVG + GPU)
 ======================================================== */
 const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: ProfileEffect; isUnlocked: boolean }) => {
   if (effect === 'none' || !isUnlocked) return null;
@@ -168,23 +168,28 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
   if (effect === 'magic_spells') {
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        {/* Swirling Spell Ring */}
+        {/* 3D SVG Arcane Rune Circle */}
         <motion.div 
-          animate={{ rotate: 360, scale: [0.95, 1.05, 0.95] }}
-          transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
-          className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-600/30 via-indigo-600/20 to-transparent blur-md"
-        />
-        {/* Floating Magic Orbs */}
-        {Array.from({ length: 8 }).map((_, i) => (
+          animate={{ rotate: 360, scale: [0.98, 1.04, 0.98] }}
+          transition={{ repeat: Infinity, duration: 12, ease: 'linear' }}
+          className="absolute inset-0 flex items-center justify-center opacity-40"
+        >
+          <svg className="w-[500px] h-[500px] text-purple-400" viewBox="0 0 200 200" fill="none">
+            <circle cx="100" cy="100" r="90" stroke="currentColor" strokeWidth="1.5" strokeDasharray="6 4" />
+            <circle cx="100" cy="100" r="75" stroke="currentColor" strokeWidth="1" />
+            <polygon points="100,10 180,150 20,150" stroke="currentColor" strokeWidth="1" />
+            <polygon points="100,190 20,50 180,50" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        </motion.div>
+        {/* Ascending Energy Sparks */}
+        {Array.from({ length: 6 }).map((_, i) => (
           <motion.div
-            key={`magic-orb-${i}`}
-            initial={{ y: 250, x: (i * 80) % 400, opacity: 0, scale: 0.6 }}
-            animate={{ y: -50, opacity: [0, 0.9, 0], scale: [0.6, 1.2, 0.6] }}
-            transition={{ repeat: Infinity, duration: 3 + (i % 3), delay: i * 0.4, ease: 'easeInOut' }}
-            className="absolute text-purple-400 font-extrabold text-sm drop-shadow-[0_0_8px_rgba(168,85,247,0.9)]"
-          >
-            🔮✨
-          </motion.div>
+            key={`magic-spark-${i}`}
+            initial={{ y: 300, x: (i * 90) % 450, opacity: 0, scale: 0.5 }}
+            animate={{ y: -50, opacity: [0, 0.9, 0], scale: [0.5, 1.3, 0.5] }}
+            transition={{ repeat: Infinity, duration: 3.5 + (i % 2), delay: i * 0.5, ease: 'easeInOut' }}
+            className="absolute w-3 h-3 rounded-full bg-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.9)]"
+          />
         ))}
       </div>
     );
@@ -194,26 +199,22 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
         <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.85, 0.4] }}
-          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          className="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500/40 via-pink-500/30 to-transparent blur-xl"
+          animate={{ scale: [1, 1.25, 1], opacity: [0.35, 0.85, 0.35] }}
+          transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+          className="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500/40 via-pink-500/30 to-transparent blur-2xl"
         />
-        {Array.from({ length: 10 }).map((_, i) => (
-          <motion.div
-            key={`hs-spark-${i}`}
-            initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
-            animate={{ 
-              x: (i % 2 === 0 ? 1 : -1) * (50 + i * 25), 
-              y: (i % 3 === 0 ? -1 : 1) * (40 + i * 20),
-              opacity: [0, 1, 0],
-              scale: [0.5, 1.3, 0.5]
-            }}
-            transition={{ repeat: Infinity, duration: 2.2, delay: i * 0.2 }}
-            className="absolute top-1/2 left-1/2 text-amber-300 text-lg drop-shadow-[0_0_10px_rgba(251,191,36,0.9)]"
-          >
-            🌟✨⚡
-          </motion.div>
-        ))}
+        {/* 3D SVG Vector Burst Rays */}
+        <motion.div 
+          animate={{ rotate: -360 }}
+          transition={{ repeat: Infinity, duration: 16, ease: 'linear' }}
+          className="absolute inset-0 flex items-center justify-center opacity-30"
+        >
+          <svg className="w-[600px] h-[600px] text-amber-300" viewBox="0 0 200 200" fill="none">
+            {Array.from({ length: 12 }).map((_, idx) => (
+              <line key={idx} x1="100" y1="100" x2={100 + 90 * Math.cos((idx * 30 * Math.PI) / 180)} y2={100 + 90 * Math.sin((idx * 30 * Math.PI) / 180)} stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4" />
+            ))}
+          </svg>
+        </motion.div>
       </div>
     );
   }
@@ -221,13 +222,14 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
   if (effect === 'retrowave_sunset') {
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden mix-blend-screen">
-        {/* Neon Grid Scanlines */}
+        {/* Moving Perspective Synthwave Grid Floor */}
         <motion.div
           animate={{ y: [0, 40] }}
-          transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-          className="w-full h-full opacity-35 bg-[linear-gradient(to_bottom,#ec4899_2px,transparent_2px)] [background-size:100%_20px]"
+          transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+          className="w-full h-full opacity-40 bg-[linear-gradient(to_bottom,#ec4899_2px,transparent_2px),linear-gradient(to_right,#ec4899_2px,transparent_2px)] [background-size:40px_20px]"
+          style={{ transform: 'perspective(300px) rotateX(60deg) translateY(-50px)' }}
         />
-        <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-pink-600/40 via-purple-900/30 to-transparent" />
+        <div className="absolute bottom-0 inset-x-0 h-44 bg-gradient-to-t from-pink-600/40 via-purple-950/30 to-transparent" />
       </div>
     );
   }
@@ -235,20 +237,22 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
   if (effect === 'autumn_leaves') {
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        {Array.from({ length: 9 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
-            key={`leaf-${i}`}
-            initial={{ y: -30, x: (i * 70) % 500, rotate: 0, opacity: 0 }}
+            key={`leaf-svg-${i}`}
+            initial={{ y: -40, x: (i * 80) % 500, rotate: 0, opacity: 0 }}
             animate={{ 
-              y: 450, 
-              x: ((i * 70) % 500) + (i % 2 === 0 ? 40 : -40), 
+              y: 500, 
+              x: ((i * 80) % 500) + (i % 2 === 0 ? 60 : -60), 
               rotate: 360, 
-              opacity: [0, 0.9, 0] 
+              opacity: [0, 0.95, 0] 
             }}
-            transition={{ repeat: Infinity, duration: 4 + (i % 3), delay: i * 0.5, ease: 'easeInOut' }}
-            className="absolute text-amber-500 text-lg drop-shadow-[0_0_8px_rgba(245,158,11,0.9)]"
+            transition={{ repeat: Infinity, duration: 4.5 + (i % 3), delay: i * 0.4, ease: 'easeInOut' }}
+            className="absolute w-5 h-5 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.9)]"
           >
-            🍂
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17,8C17,10 16,13 13.5,15.5C11,18 8,19 6,19C6,17 7,14 9.5,11.5C12,9 15,8 17,8M17,8L19,3M13.5,15.5L21,21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </motion.div>
         ))}
       </div>
@@ -259,9 +263,9 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden mix-blend-screen">
         <motion.div 
-          animate={{ opacity: [0.2, 0.7, 0.2], x: [-3, 3, -3] }}
-          transition={{ repeat: Infinity, duration: 0.3, ease: 'easeInOut' }}
-          className="w-full h-full bg-gradient-to-b from-cyan-500/25 via-transparent to-pink-500/25"
+          animate={{ opacity: [0.2, 0.8, 0.2], x: [-4, 4, -4] }}
+          transition={{ repeat: Infinity, duration: 0.25, ease: 'easeInOut' }}
+          className="w-full h-full bg-gradient-to-b from-cyan-500/30 via-transparent to-pink-500/30"
         />
       </div>
     );
@@ -270,17 +274,15 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
   if (effect === 'dragon_fire') {
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-orange-600/40 via-red-600/20 to-transparent" />
+        <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-orange-600/50 via-red-600/25 to-transparent" />
         {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
-            key={`fire-ember-${i}`}
-            initial={{ y: 300, x: (i * 75) % 450, opacity: 0, scale: 0.5 }}
-            animate={{ y: -20, opacity: [0, 1, 0], scale: [0.5, 1.4, 0.5] }}
-            transition={{ repeat: Infinity, duration: 2.5 + (i % 2), delay: i * 0.35, ease: 'easeOut' }}
-            className="absolute text-orange-500 text-base drop-shadow-[0_0_10px_rgba(249,115,22,0.9)]"
-          >
-            🔥💥
-          </motion.div>
+            key={`fire-particle-${i}`}
+            initial={{ y: 320, x: (i * 70) % 480, opacity: 0, scale: 0.4 }}
+            animate={{ y: -30, opacity: [0, 1, 0], scale: [0.4, 1.5, 0.4] }}
+            transition={{ repeat: Infinity, duration: 2.4 + (i % 2), delay: i * 0.3, ease: 'easeOut' }}
+            className="absolute w-4 h-4 rounded-full bg-gradient-to-t from-red-500 to-amber-400 shadow-[0_0_14px_rgba(249,115,22,0.95)]"
+          />
         ))}
       </div>
     );
@@ -289,20 +291,22 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
   if (effect === 'sakura_breeze') {
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
-        {Array.from({ length: 9 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
-            key={`sakura-p-${i}`}
-            initial={{ y: -20, x: (i * 65) % 450, rotate: 0, opacity: 0 }}
+            key={`sakura-svg-${i}`}
+            initial={{ y: -30, x: (i * 75) % 480, rotate: 0, opacity: 0 }}
             animate={{ 
-              y: 450, 
-              x: ((i * 65) % 450) + (i % 2 === 0 ? 50 : -50), 
-              rotate: 180, 
+              y: 500, 
+              x: ((i * 75) % 480) + (i % 2 === 0 ? 60 : -60), 
+              rotate: 220, 
               opacity: [0, 0.95, 0] 
             }}
             transition={{ repeat: Infinity, duration: 5 + (i % 3), delay: i * 0.4, ease: 'easeInOut' }}
-            className="absolute text-pink-400 text-lg drop-shadow-[0_0_8px_rgba(244,114,182,0.9)]"
+            className="absolute w-5 h-5 text-pink-300 drop-shadow-[0_0_10px_rgba(244,114,182,0.9)]"
           >
-            🌸
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12,2C12,2 14,7 18,9C22,11 22,15 19,18C16,21 12,21 9,18C6,15 6,11 10,9C14,7 12,2 12,2Z" />
+            </svg>
           </motion.div>
         ))}
       </div>
@@ -311,21 +315,21 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
 
   if (effect === 'cyber_matrix_stream') {
     return (
-      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden font-mono text-[11px] text-emerald-400/80 font-bold">
-        {Array.from({ length: 6 }).map((_, col) => (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden font-mono text-xs text-emerald-400/90 font-black tracking-widest">
+        {Array.from({ length: 7 }).map((_, col) => (
           <motion.div
             key={`matrix-col-${col}`}
-            initial={{ y: -100 }}
-            animate={{ y: 400 }}
-            transition={{ repeat: Infinity, duration: 2.8 + col * 0.4, ease: 'linear', delay: col * 0.3 }}
-            className="absolute flex flex-col gap-1"
-            style={{ left: `${15 + col * 15}%` }}
+            initial={{ y: -120 }}
+            animate={{ y: 450 }}
+            transition={{ repeat: Infinity, duration: 2.4 + col * 0.3, ease: 'linear', delay: col * 0.25 }}
+            className="absolute flex flex-col gap-1.5 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+            style={{ left: `${12 + col * 13}%` }}
           >
-            <span>0</span>
             <span>1</span>
             <span>0</span>
             <span>1</span>
             <span>1</span>
+            <span>0</span>
           </motion.div>
         ))}
       </div>
@@ -337,17 +341,17 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
         <motion.div 
           animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 15, ease: 'linear' }}
-          className="w-full h-full opacity-45 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/70 via-indigo-900/40 to-transparent blur-md"
+          transition={{ repeat: Infinity, duration: 18, ease: 'linear' }}
+          className="w-full h-full opacity-50 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/80 via-indigo-900/50 to-transparent blur-md"
         />
         {Array.from({ length: 6 }).map((_, i) => (
           <motion.div
-            key={`cosmic-star-${i}`}
+            key={`cosmic-sparkle-${i}`}
             animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 8 + i * 2, ease: 'linear' }}
-            className="absolute inset-0 flex items-center justify-center text-indigo-300 text-xs"
+            transition={{ repeat: Infinity, duration: 7 + i * 2, ease: 'linear' }}
+            className="absolute inset-0 flex items-center justify-center text-indigo-200 text-sm"
           >
-            <span style={{ transform: `translate(${(i + 1) * 35}px, ${(i + 1) * 20}px)` }}>✨</span>
+            <span style={{ transform: `translate(${(i + 1) * 40}px, ${(i + 1) * 25}px)` }} className="drop-shadow-[0_0_8px_rgba(165,180,252,0.9)]">✨</span>
           </motion.div>
         ))}
       </div>
@@ -358,9 +362,9 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
     return (
       <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
         <motion.div 
-          animate={{ opacity: [0.1, 0.8, 0.1, 0.9, 0.1] }}
-          transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
-          className="w-full h-full bg-cyan-400/20 backdrop-blur-[1px]"
+          animate={{ opacity: [0.1, 0.9, 0.1, 0.95, 0.1] }}
+          transition={{ repeat: Infinity, duration: 1.1, ease: 'easeInOut' }}
+          className="w-full h-full bg-cyan-400/25 backdrop-blur-[1px]"
         />
       </div>
     );
@@ -371,29 +375,35 @@ const ProfileEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Profi
 ProfileEffectOverlay.displayName = 'ProfileEffectOverlay';
 
 /* ========================================================
-   COMPLEX AVATAR DECORATION RENDERER (SHOP PACK PERKS)
+   COMPLEX 3D ANIME AVATAR DECORATION (SHOP PACK PERKS)
 ======================================================== */
 const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decoration: AvatarDecoration; isUnlocked: boolean }) => {
   if (decoration === 'none' || !isUnlocked) return null;
 
   if (decoration === 'anime_power_aura') {
     return (
-      <div className="absolute -inset-3.5 rounded-full z-10 pointer-events-none">
+      <div className="absolute -inset-4 rounded-full z-10 pointer-events-none">
+        {/* Concentric Rotating 3D Energy Rings */}
         <motion.div 
-          animate={{ rotate: 360, scale: [1, 1.06, 1] }}
-          transition={{ repeat: Infinity, duration: 4, ease: 'linear' }}
-          className="w-full h-full rounded-full border-2 border-amber-400/90 shadow-[0_0_22px_rgba(251,191,36,0.9)] opacity-90"
+          animate={{ rotate: 360, scale: [1, 1.08, 1] }}
+          transition={{ repeat: Infinity, duration: 3.5, ease: 'linear' }}
+          className="w-full h-full rounded-full border-2 border-amber-400/90 shadow-[0_0_26px_rgba(251,191,36,0.95)] opacity-95"
         />
-        <div className="absolute top-0 right-1 w-3 h-3 bg-amber-300 rounded-full blur-xs animate-ping" />
+        <motion.div 
+          animate={{ rotate: -360 }}
+          transition={{ repeat: Infinity, duration: 6, ease: 'linear' }}
+          className="absolute inset-1 rounded-full border border-dashed border-amber-300/80"
+        />
+        <div className="absolute top-0 right-2 w-3.5 h-3.5 bg-amber-300 rounded-full blur-xs animate-ping" />
       </div>
     );
   }
 
   if (decoration === 'cyber_hacker_void') {
     return (
-      <div className="absolute -inset-3 rounded-full z-10 pointer-events-none">
-        <div className="w-full h-full rounded-full border-2 border-emerald-400 animate-pulse shadow-[0_0_20px_rgba(52,211,153,0.9)]" />
-        <div className="absolute inset-0 border border-cyan-400 rounded-full animate-spin" style={{ animationDuration: '5s' }} />
+      <div className="absolute -inset-3.5 rounded-full z-10 pointer-events-none">
+        <div className="w-full h-full rounded-full border-2 border-emerald-400 animate-pulse shadow-[0_0_22px_rgba(52,211,153,0.95)]" />
+        <div className="absolute inset-0 border-2 border-cyan-400 rounded-full animate-spin" style={{ animationDuration: '4s' }} />
       </div>
     );
   }
@@ -402,10 +412,10 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
     return (
       <motion.div 
         animate={{ rotate: -360 }}
-        transition={{ repeat: Infinity, duration: 10, ease: 'linear' }}
-        className="absolute -inset-4 rounded-full border-2 border-dashed border-indigo-400 z-10 pointer-events-none shadow-[0_0_24px_rgba(129,140,248,0.95)]"
+        transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
+        className="absolute -inset-4.5 rounded-full border-2 border-dashed border-indigo-400 z-10 pointer-events-none shadow-[0_0_26px_rgba(129,140,248,0.95)]"
       >
-        <div className="absolute -top-1 left-1/2 w-3.5 h-3.5 bg-indigo-300 rounded-full shadow-lg" />
+        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 bg-indigo-300 rounded-full shadow-[0_0_12px_rgba(165,180,252,1)]" />
       </motion.div>
     );
   }
@@ -413,7 +423,7 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
   if (decoration === 'phoenix_flame') {
     return (
       <div className="absolute -top-4 -right-3 z-20 pointer-events-none">
-        <Flame className="w-8 h-8 text-rose-500 fill-rose-500 animate-pulse drop-shadow-[0_0_14px_rgba(244,63,94,0.95)]" />
+        <Flame className="w-9 h-9 text-rose-500 fill-rose-500 animate-pulse drop-shadow-[0_0_16px_rgba(244,63,94,0.95)]" />
       </div>
     );
   }
@@ -421,39 +431,39 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
   if (decoration === 'crown') {
     return (
       <motion.div 
-        animate={{ y: [0, -6, 0] }}
-        transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-        className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        animate={{ y: [0, -7, 0] }}
+        transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+        className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
       >
-        <Crown className="w-8 h-8 text-amber-400 fill-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
+        <Crown className="w-9 h-9 text-amber-400 fill-amber-400 drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]" />
       </motion.div>
     );
   }
 
   if (decoration === 'neon') {
     return (
-      <div className="absolute -inset-2.5 rounded-full border-2 border-cyan-400 animate-spin z-10 pointer-events-none shadow-[0_0_18px_rgba(34,211,238,0.9)] opacity-90" style={{ animationDuration: '6s' }} />
+      <div className="absolute -inset-3 rounded-full border-2 border-cyan-400 animate-spin z-10 pointer-events-none shadow-[0_0_20px_rgba(34,211,238,0.95)] opacity-95" style={{ animationDuration: '5s' }} />
     );
   }
 
   if (decoration === 'sparkle') {
     return (
-      <div className="absolute -inset-2.5 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 opacity-70 blur-md animate-pulse z-0 pointer-events-none" />
+      <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 opacity-80 blur-md animate-pulse z-0 pointer-events-none" />
     );
   }
 
   if (decoration === 'flame') {
     return (
-      <div className="absolute -top-3 -right-2 z-20 pointer-events-none">
-        <Flame className="w-7 h-7 text-orange-500 fill-orange-500 animate-pulse drop-shadow-[0_0_10px_rgba(249,115,22,0.9)]" />
+      <div className="absolute -top-3.5 -right-2.5 z-20 pointer-events-none">
+        <Flame className="w-8 h-8 text-orange-500 fill-orange-500 animate-pulse drop-shadow-[0_0_12px_rgba(249,115,22,0.95)]" />
       </div>
     );
   }
 
   if (decoration === 'diamond') {
     return (
-      <div className="absolute -bottom-1 -right-1 z-20 pointer-events-none">
-        <Diamond className="w-6 h-6 text-indigo-400 fill-indigo-400 drop-shadow-[0_0_12px_rgba(129,140,248,0.95)]" />
+      <div className="absolute -bottom-1.5 -right-1.5 z-20 pointer-events-none">
+        <Diamond className="w-7 h-7 text-indigo-400 fill-indigo-400 drop-shadow-[0_0_14px_rgba(129,140,248,0.95)]" />
       </div>
     );
   }
@@ -462,8 +472,8 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
     return (
       <motion.div 
         animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
-        className="absolute -inset-3 rounded-full border-2 border-dashed border-amber-400 z-10 pointer-events-none shadow-[0_0_20px_rgba(251,191,36,0.95)]"
+        transition={{ repeat: Infinity, duration: 7, ease: 'linear' }}
+        className="absolute -inset-3.5 rounded-full border-2 border-dashed border-amber-400 z-10 pointer-events-none shadow-[0_0_22px_rgba(251,191,36,0.95)]"
       />
     );
   }
@@ -471,28 +481,28 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
   if (decoration === 'galaxy_warp') {
     return (
       <motion.div 
-        animate={{ scale: [1, 1.08, 1], opacity: [0.8, 1, 0.8] }}
-        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-        className="absolute -inset-3 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-500 to-pink-500 opacity-80 blur-xs z-0 pointer-events-none"
+        animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+        className="absolute -inset-3.5 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-500 to-pink-500 opacity-90 blur-xs z-0 pointer-events-none"
       />
     );
   }
 
   if (decoration === 'holographic_glitch') {
     return (
-      <div className="absolute -inset-2.5 rounded-full border-2 border-pink-500 animate-pulse z-10 pointer-events-none shadow-[0_0_16px_rgba(236,72,153,0.9)] opacity-90" />
+      <div className="absolute -inset-3 rounded-full border-2 border-pink-500 animate-pulse z-10 pointer-events-none shadow-[0_0_18px_rgba(236,72,153,0.95)] opacity-95" />
     );
   }
 
   if (decoration === 'sakura') {
     return (
-      <div className="absolute -inset-2 rounded-full border-2 border-pink-400 animate-pulse z-10 pointer-events-none shadow-[0_0_15px_rgba(244,114,182,0.8)] opacity-90" />
+      <div className="absolute -inset-2.5 rounded-full border-2 border-pink-400 animate-pulse z-10 pointer-events-none shadow-[0_0_18px_rgba(244,114,182,0.9)] opacity-95" />
     );
   }
 
   if (decoration === 'matrix') {
     return (
-      <div className="absolute -inset-2 rounded-full border-2 border-emerald-400 animate-spin z-10 pointer-events-none shadow-[0_0_15px_rgba(52,211,153,0.8)] opacity-90" style={{ animationDuration: '8s' }} />
+      <div className="absolute -inset-2.5 rounded-full border-2 border-emerald-400 animate-spin z-10 pointer-events-none shadow-[0_0_18px_rgba(52,211,153,0.9)] opacity-95" style={{ animationDuration: '7s' }} />
     );
   }
 
@@ -501,45 +511,35 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
 AvatarDecorationFrame.displayName = 'AvatarDecorationFrame';
 
 /* ========================================================
-   3D BANNER EFFECT OVERLAY RENDERER (GPU ACCELERATED 3D TRANSFORMS)
+   3D ANIME COVER BANNER ANIMATED OVERLAY (GPU ACCELERATED)
 ======================================================== */
 const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: BannerEffect; isUnlocked: boolean }) => {
   if (effect === 'none' || !isUnlocked) return null;
 
   if (effect === 'retrowave_grid') {
     return (
-      <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden bg-slate-950">
-        {/* 3D Perspective Grid Horizon */}
-        <div className="absolute inset-0 [perspective:600px] flex items-center justify-center">
-          <motion.div 
-            animate={{ y: [0, 40] }}
-            transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
-            className="w-[200%] h-[200%] absolute top-0 bg-[linear-gradient(to_right,#ec4899_2px,transparent_2px),linear-gradient(to_bottom,#ec4899_2px,transparent_2px)] [background-size:40px_40px] opacity-60 shadow-[0_0_30px_rgba(236,72,153,0.8)]"
-            style={{ transform: 'rotateX(65deg) translateZ(0)' }}
-          />
-        </div>
-        {/* Glowing Synthwave Sun */}
+      <div className="absolute inset-0 bg-gradient-to-t from-pink-600/50 via-purple-950/40 to-transparent backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {/* Moving Perspective 3D Neon Laser Grid */}
         <motion.div 
-          animate={{ scale: [1, 1.08, 1], opacity: [0.8, 1, 0.8] }}
-          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full bg-gradient-to-t from-pink-500 via-purple-600 to-transparent blur-md shadow-[0_0_40px_rgba(236,72,153,0.9)]"
+          animate={{ y: [0, 30] }}
+          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+          className="w-full h-[300%] opacity-60 bg-[linear-gradient(to_bottom,#ec4899_2px,transparent_2px),linear-gradient(to_right,#ec4899_2px,transparent_2px)] [background-size:30px_30px]"
+          style={{ transform: 'perspective(200px) rotateX(65deg) translateY(-100px)' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/70" />
       </div>
     );
   }
 
   if (effect === 'hyperdrive_stars') {
     return (
-      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden [perspective:800px]">
-        {/* 3D Warp Speed Tunnel Particles */}
-        {Array.from({ length: 15 }).map((_, i) => (
+      <div className="absolute inset-0 bg-indigo-950/40 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {Array.from({ length: 16 }).map((_, i) => (
           <motion.div
-            key={`3d-star-${i}`}
-            initial={{ scale: 0.1, z: -500, x: ((i * 47) % 300) - 150, y: ((i * 31) % 180) - 90, opacity: 0 }}
-            animate={{ scale: [0.1, 2.5], z: [ -500, 200 ], opacity: [0, 1, 0] }}
-            transition={{ repeat: Infinity, duration: 1.2 + (i % 3) * 0.3, delay: i * 0.1, ease: 'easeIn' }}
-            className="absolute top-1/2 left-1/2 w-2 h-2 bg-indigo-200 rounded-full shadow-[0_0_12px_rgba(129,140,248,1)]"
+            key={`star-streak-3d-${i}`}
+            initial={{ x: -100, y: (i * 18) % 250, opacity: 0 }}
+            animate={{ x: 800, opacity: [0, 1, 0] }}
+            transition={{ repeat: Infinity, duration: 1.2 + (i % 3) * 0.3, delay: i * 0.1, ease: 'linear' }}
+            className="absolute h-1 w-16 bg-gradient-to-r from-transparent via-indigo-300 to-transparent rounded-full shadow-[0_0_12px_rgba(129,140,248,1)]"
           />
         ))}
       </div>
@@ -548,40 +548,16 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
 
   if (effect === 'frostbite') {
     return (
-      <div className="absolute inset-0 bg-cyan-950/20 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden [perspective:600px]">
+      <div className="absolute inset-0 bg-cyan-500/15 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
         {Array.from({ length: 12 }).map((_, i) => (
           <motion.div
-            key={`3d-ice-${i}`}
-            initial={{ y: -30, x: (i * 65) % 550, rotateX: 0, rotateY: 0, opacity: 0 }}
-            animate={{ 
-              y: 280, 
-              x: ((i * 65) % 550) + (i % 2 === 0 ? 40 : -40), 
-              rotateX: 360, 
-              rotateY: 180, 
-              opacity: [0, 1, 0] 
-            }}
-            transition={{ repeat: Infinity, duration: 3.5 + (i % 2), delay: i * 0.25, ease: 'easeInOut' }}
-            className="absolute text-cyan-200 text-lg drop-shadow-[0_0_10px_rgba(6,182,212,0.9)]"
+            key={`snow-3d-${i}`}
+            initial={{ y: -20, x: (i * 55) % 600, opacity: 0, rotate: 0 }}
+            animate={{ y: 300, x: ((i * 55) % 600) + (i % 2 === 0 ? 40 : -40), opacity: [0, 1, 0], rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 3 + (i % 2), delay: i * 0.25, ease: 'easeInOut' }}
+            className="absolute text-cyan-200 text-base drop-shadow-[0_0_8px_rgba(6,182,212,0.95)]"
           >
-            ❄️✨
-          </motion.div>
-        ))}
-      </div>
-    );
-  }
-
-  if (effect === 'gold_dust') {
-    return (
-      <div className="absolute inset-0 bg-amber-500/10 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden [perspective:500px]">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <motion.div
-            key={`3d-gold-${i}`}
-            initial={{ y: 250, x: (i * 60) % 550, scale: 0.4, opacity: 0 }}
-            animate={{ y: -20, scale: [0.4, 1.3, 0.4], opacity: [0, 1, 0] }}
-            transition={{ repeat: Infinity, duration: 2.8 + (i % 2), delay: i * 0.25, ease: 'easeOut' }}
-            className="absolute text-amber-300 text-sm drop-shadow-[0_0_10px_rgba(251,191,36,0.9)] font-extrabold"
-          >
-            ✨
+            ❄️
           </motion.div>
         ))}
       </div>
@@ -592,62 +568,49 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
     return (
       <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
         <motion.div 
-          animate={{ opacity: [0, 0.85, 0, 0.95, 0] }}
+          animate={{ opacity: [0, 0.9, 0, 0.95, 0] }}
           transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
-          className="w-full h-full bg-indigo-500/30 backdrop-blur-[1px] shadow-[inset_0_0_50px_rgba(99,102,241,0.8)]"
+          className="w-full h-full bg-indigo-400/30 backdrop-blur-[1px]"
         />
+      </div>
+    );
+  }
+
+  if (effect === 'gold_dust') {
+    return (
+      <div className="absolute inset-0 bg-amber-500/15 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <motion.div
+            key={`gold-dust-3d-${i}`}
+            initial={{ y: 250, x: (i * 50) % 600, opacity: 0 }}
+            animate={{ y: -20, opacity: [0, 1, 0] }}
+            transition={{ repeat: Infinity, duration: 2.8 + (i % 2), delay: i * 0.25, ease: 'easeOut' }}
+            className="absolute text-amber-300 text-sm drop-shadow-[0_0_10px_rgba(251,191,36,0.95)]"
+          >
+            ✨
+          </motion.div>
+        ))}
       </div>
     );
   }
 
   if (effect === 'nebula') {
     return (
-      <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-        <motion.div 
-          animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-          transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
-          className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-600/40 via-pink-600/30 to-indigo-900/50 opacity-80 blur-md"
-        />
-      </div>
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/50 via-pink-600/40 to-indigo-600/50 backdrop-blur-[1px] animate-pulse pointer-events-none z-10" />
     );
   }
 
   if (effect === 'matrix') {
     return (
-      <div className="absolute inset-0 bg-emerald-950/30 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden font-mono text-[10px] text-emerald-400 font-bold">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <motion.div
-            key={`b-matrix-${i}`}
-            initial={{ y: -40 }}
-            animate={{ y: 220 }}
-            transition={{ repeat: Infinity, duration: 2 + i * 0.3, ease: 'linear', delay: i * 0.2 }}
-            className="absolute flex flex-col"
-            style={{ left: `${10 + i * 12}%` }}
-          >
-            <span>0</span>
-            <span>1</span>
-            <span>0</span>
-          </motion.div>
-        ))}
+      <div className="absolute inset-0 bg-emerald-950/40 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        <div className="w-full h-full opacity-50 bg-[radial-gradient(#34d399_2px,transparent_2px)] [background-size:20px_20px] animate-pulse" />
       </div>
     );
   }
 
   if (effect === 'sakura') {
     return (
-      <div className="absolute inset-0 bg-pink-500/15 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <motion.div
-            key={`b-sakura-${i}`}
-            initial={{ y: -20, x: (i * 70) % 500 }}
-            animate={{ y: 240, x: ((i * 70) % 500) + 30 }}
-            transition={{ repeat: Infinity, duration: 4 + i * 0.5, ease: 'easeInOut', delay: i * 0.3 }}
-            className="absolute text-pink-300 text-xs"
-          >
-            🌸
-          </motion.div>
-        ))}
-      </div>
+      <div className="absolute inset-0 bg-pink-500/20 backdrop-blur-[1px] pointer-events-none z-10" />
     );
   }
 
@@ -1873,7 +1836,7 @@ export function UserProfileCard({
                     Upgrade Your Profile to Full Discord Nitro
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Selecting a subscription plan instantly unlocks all avatar decorations, banner effects, soundboard clips, and persists state in IndexedDB!
+                    Selecting a subscription plan instantly unlocks all avatar decorations, animated banners, soundboard clips, and persists state in IndexedDB!
                   </p>
                 </div>
 
