@@ -60,18 +60,26 @@ const DB_NAME = 'UserProfileCardDB';
 const DB_VERSION = 1;
 const STORE_PROFILE = 'profileData';
 
+let dbPromiseCache: Promise<IDBDatabase> | null = null;
+
 function openProfileDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_PROFILE)) {
-        db.createObjectStore(STORE_PROFILE);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+  if (!dbPromiseCache) {
+    dbPromiseCache = new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_PROFILE)) {
+          db.createObjectStore(STORE_PROFILE);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = (e) => {
+        dbPromiseCache = null;
+        reject((e.target as any)?.error);
+      };
+    });
+  }
+  return dbPromiseCache;
 }
 
 async function idbSaveProfile(key: string, data: any) {
@@ -1293,8 +1301,8 @@ export function UserProfileCard({
 
             {/* Badges Row */}
             <div className="flex items-center gap-2 flex-wrap mb-6">
-              {profile.badges.map(badge => (
-                <Tooltip.Root key={badge.id}>
+              {profile.badges.map((badge, idx) => (
+                <Tooltip.Root key={`badge-${badge.id}-${idx}`}>
                   <Tooltip.Trigger asChild>
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${badge.color} cursor-pointer transition transform hover:scale-105`}>
                       <Zap className="w-3.5 h-3.5" />
@@ -1600,7 +1608,7 @@ export function UserProfileCard({
               <Tabs.Content value="media" className="outline-none">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {['/ny_skyscrapers.jpg', '/ny_skyline.jpg', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'].map((img, idx) => (
-                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden bg-slate-900 group relative cursor-pointer">
+                    <div key={`media-item-${idx}`} className="aspect-square rounded-2xl overflow-hidden bg-slate-900 group relative cursor-pointer">
                       <img src={img} alt={`Media gallery ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                         <Eye className="w-6 h-6 text-white" />
@@ -1730,7 +1738,7 @@ export function UserProfileCard({
                   const isSelected = subscriptionTier === plan.id;
                   return (
                     <div 
-                      key={`modal-plan-${plan.id}`}
+                      key={plan.id}
                       className={`p-4 rounded-2xl border flex items-center justify-between transition cursor-pointer ${
                         isSelected 
                           ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/50' 
