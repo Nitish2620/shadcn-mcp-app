@@ -639,7 +639,7 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
   if (effect === 'matrix') {
     return (
       <div className="absolute inset-0 bg-emerald-950/40 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden font-mono text-xs text-emerald-400 font-bold">
-        {Array.from({ length: colCount => 8 }).map((_, col) => (
+        {Array.from({ length: 8 }).map((_, col) => (
           <motion.div
             key={`banner-matrix-col-${col}`}
             initial={{ y: -80 }}
