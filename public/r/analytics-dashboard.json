@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "analytics-dashboard",
+  "type": "registry:component",
+  "title": "Analytics & Metrics Dashboard Component",
+  "description": "An MNC-grade executive analytics metrics grid component with trend indicators, revenue telemetry, and uptime stats.",
+  "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
+  "files": [
+    {
+      "path": "src/components/dashboard/AnalyticsDashboard.tsx",
+      "type": "registry:component",
+      "target": "components/dashboard/AnalyticsDashboard.tsx"
+    }
+  ]
+}

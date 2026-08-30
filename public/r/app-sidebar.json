@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "app-sidebar",
+  "type": "registry:component",
+  "title": "Collapsible App Sidebar Component",
+  "description": "An MNC-grade collapsible application sidebar component with search, active badges, status indicators, and user profile footer.",
+  "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
+  "files": [
+    {
+      "path": "src/components/sidebar/AppSidebar.tsx",
+      "type": "registry:component",
+      "target": "components/sidebar/AppSidebar.tsx"
+    }
+  ]
+}
