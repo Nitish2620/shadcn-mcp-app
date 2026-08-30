@@ -9,9 +9,22 @@ export type AvatarDecoration =
   | 'matrix'
   | 'solar_flare'
   | 'galaxy_warp'
-  | 'holographic_glitch';
+  | 'holographic_glitch'
+  | 'anime_power_aura'
+  | 'cyber_hacker_void'
+  | 'celestial_orbit'
+  | 'phoenix_flame';
 
-export type BannerEffect = 'none' | 'nebula' | 'matrix' | 'gold_dust' | 'sakura' | 'frostbite' | 'lightning';
+export type BannerEffect = 
+  | 'none' 
+  | 'nebula' 
+  | 'matrix' 
+  | 'gold_dust' 
+  | 'sakura' 
+  | 'frostbite' 
+  | 'lightning'
+  | 'retrowave_grid'
+  | 'hyperdrive_stars';
 
 export type ProfileEffect = 
   | 'none' 
@@ -22,9 +35,11 @@ export type ProfileEffect =
   | 'sakura_breeze'
   | 'cyber_matrix_stream'
   | 'cosmic_void'
-  | 'lightning_surge';
+  | 'lightning_surge'
+  | 'hypesquad_explosion'
+  | 'retrowave_sunset';
 
-export type ProfileTheme = 'blurple' | 'nitro_pink' | 'cyber_emerald' | 'solar_gold' | 'midnight_obsidian';
+export type ProfileTheme = 'blurple' | 'nitro_pink' | 'cyber_emerald' | 'solar_gold' | 'midnight_obsidian' | 'synthwave_neon';
 
 export type NitroLevel = 'none' | 'level1' | 'level2' | 'level3';
 
