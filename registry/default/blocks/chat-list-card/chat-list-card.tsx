@@ -187,12 +187,33 @@ MessageBubble.displayName = 'MessageBubble';
 /* ========================================================
    MAIN CHAT LIST CARD COMPONENT (WITH VIRTUALIZED WINDOWING)
 ======================================================== */
+const STRESS_TEST_KEY = '__stress_test_chats';
+
 export function ChatListCard({
   title = "Chats",
   chats = INITIAL_CHATS
 }: ChatListCardProps) {
-  const [chatList, setChatList] = useState<ChatItem[]>(chats);
-  const [selectedChatId, setSelectedChatId] = useState<string | null>('1');
+  // Lazy initializer: read from localStorage ONCE on mount (survives refresh)
+  const [chatList, setChatList] = useState<ChatItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(STRESS_TEST_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as ChatItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return chats;
+  });
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem(STRESS_TEST_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].id;
+      }
+    } catch {}
+    return '1';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'pinned'>('all');
@@ -200,7 +221,16 @@ export function ChatListCard({
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatName, setNewChatName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [is10kLoaded, setIs10kLoaded] = useState(false);
+  const [is10kLoaded, setIs10kLoaded] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STRESS_TEST_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) && parsed.length > 100;
+      }
+    } catch {}
+    return false;
+  });
 
   // Virtual Windowing State for 10,000+ Items (Zero Browser Freeze)
   const [scrollTop, setScrollTop] = useState(0);
@@ -262,9 +292,10 @@ export function ChatListCard({
   // 10,000 ROW STRESS TEST MOCK DATA GENERATOR
   const handleInject10kData = useCallback(() => {
     if (is10kLoaded) {
+      localStorage.removeItem(STRESS_TEST_KEY);
       setChatList(INITIAL_CHATS);
       setIs10kLoaded(false);
-      showToast('Reset to 5 initial chats 🔄');
+      showToast('Reset to 5 initial chats (cache cleared) 🔄');
       return;
     }
 
