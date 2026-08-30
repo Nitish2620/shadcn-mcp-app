@@ -32,8 +32,7 @@ import {
   MoreHorizontal,
   Layers,
   Award,
-  Palette,
-  Compass
+  Palette
 } from 'lucide-react';
 import type { 
   UserProfileData, 
@@ -1670,7 +1669,7 @@ export function UserProfileCard({
 
                           <ul className="space-y-2.5 text-xs font-medium">
                             {plan.features.map((feat, idx) => (
-                              <li key={idx} className="flex items-start gap-2">
+                              <li key={`${plan.id}-feat-${idx}`} className="flex items-start gap-2">
                                 <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                 <span>{feat}</span>
                               </li>
