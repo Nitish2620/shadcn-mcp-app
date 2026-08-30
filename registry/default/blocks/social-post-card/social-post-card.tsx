@@ -33,14 +33,62 @@ import {
   Volume2,
   VolumeX,
   BarChart3,
-  Check
+  Check,
+  Languages,
+  PieChart,
+  Users
 } from 'lucide-react';
-import type { ReactionType, Comment, SocialPostProps, PollData } from './types';
+import type { ReactionType, Comment, SocialPostProps, PollData, ReactionUser, PostAnalytics } from './types';
 import { REACTIONS } from './types';
 
-export type { ReactionType, Comment, SocialPostProps, PollData };
+export type { ReactionType, Comment, SocialPostProps, PollData, ReactionUser, PostAnalytics };
 
 const COMMENT_ITEM_HEIGHT = 86; // Height of each comment row in px for 60 FPS virtualization
+
+/* ========================================================
+   INDEXEDDB AUTO-PERSISTENCE ENGINE FOR SOCIAL POST CARD
+======================================================== */
+const DB_NAME = 'SocialPostCardDB';
+const DB_VERSION = 1;
+const STORE_POST = 'postState';
+
+function openPostDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_POST)) {
+        db.createObjectStore(STORE_POST);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function idbSavePostState(key: string, data: any) {
+  try {
+    const db = await openPostDB();
+    const tx = db.transaction(STORE_POST, 'readwrite');
+    tx.objectStore(STORE_POST).put(data, key);
+  } catch (err) {
+    console.warn('IndexedDB save skipped:', err);
+  }
+}
+
+async function idbLoadPostState(key: string): Promise<any> {
+  try {
+    const db = await openPostDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_POST, 'readonly');
+      const req = tx.objectStore(STORE_POST).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
 
 /* ========================================================
    INSTANT MNC AVATAR SYSTEM (0ms Slow 3G Latency)
@@ -170,6 +218,7 @@ const PollWidget = React.memo(({
             <button
               key={option.id}
               type="button"
+              data-voted={isVoted ? "true" : "false"}
               onClick={() => onVote(option.id)}
               className={`w-full relative overflow-hidden rounded-xl p-3 text-left transition border cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none ${
                 isVoted
@@ -177,7 +226,6 @@ const PollWidget = React.memo(({
                   : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 text-slate-800 dark:text-slate-200'
               }`}
             >
-              {/* Progress Fill Bar */}
               <div 
                 className={`absolute left-0 top-0 bottom-0 transition-all duration-500 ${
                   isVoted ? 'bg-blue-500/20 dark:bg-blue-500/30' : 'bg-slate-200/60 dark:bg-slate-700/50'
@@ -208,12 +256,12 @@ const PollWidget = React.memo(({
 PollWidget.displayName = 'PollWidget';
 
 /* ========================================================
-   MEMOIZED COMMENT ROW SUB-COMPONENT
+   MEMOIZED COMMENT ROW SUB-COMPONENT WITH INLINE REPLY
 ======================================================== */
 const CommentRow = React.memo(({ 
   comment, 
   onLike, 
-  onReply, 
+  onAddReply, 
   isPlayingAudio, 
   onToggleVoice, 
   showReplies, 
@@ -221,12 +269,23 @@ const CommentRow = React.memo(({
 }: { 
   comment: Comment; 
   onLike: (id: string) => void; 
-  onReply: (author: string) => void; 
+  onAddReply: (commentId: string, replyText: string) => void; 
   isPlayingAudio: boolean; 
   onToggleVoice: (id: string) => void; 
   showReplies: boolean; 
   onToggleReplies: (id: string) => void; 
 }) => {
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyInput, setReplyInput] = useState('');
+
+  const handleSendReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyInput.trim()) return;
+    onAddReply(comment.id, replyInput.trim());
+    setReplyInput('');
+    setIsReplying(false);
+  };
+
   return (
     <div className="space-y-2 group animate-in fade-in duration-200">
       <div className="flex items-start gap-2.5">
@@ -269,6 +328,7 @@ const CommentRow = React.memo(({
           <div className="flex items-center gap-3 text-[11px] mt-1 px-1.5">
             <button
               type="button"
+              data-liked={comment.isLiked ? "true" : "false"}
               onClick={() => onLike(comment.id)}
               className={`flex items-center gap-1 font-medium transition cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-md px-1 ${
                 comment.isLiked ? 'text-red-500 font-semibold' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
@@ -280,7 +340,7 @@ const CommentRow = React.memo(({
 
             <button 
               type="button"
-              onClick={() => onReply(comment.author.name)}
+              onClick={() => setIsReplying(!isReplying)}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-md px-1"
             >
               <CornerDownRight className="w-3 h-3" />
@@ -297,6 +357,26 @@ const CommentRow = React.memo(({
               </button>
             )}
           </div>
+
+          {/* Inline Reply Input Composer */}
+          {isReplying && (
+            <form onSubmit={handleSendReply} className="mt-2.5 flex items-center gap-2 animate-in fade-in">
+              <input
+                type="text"
+                autoFocus
+                placeholder={`Reply to @${comment.author.name}...`}
+                value={replyInput}
+                onChange={(e) => setReplyInput(e.target.value)}
+                className="flex-1 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/40 text-slate-800 dark:text-slate-100"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition shadow-2xs cursor-pointer"
+              >
+                Reply
+              </button>
+            </form>
+          )}
 
           {showReplies && comment.replies && (
             <div className="mt-2.5 pl-3 border-l-2 border-blue-500/30 dark:border-blue-500/20 space-y-2.5">
@@ -333,7 +413,8 @@ export function SocialPostCard({
   },
   timestamp = 'Thursday, Jun 31, 5:50 PM',
   privacy = 'public',
-  content = "I'm so glad to share with you guys some photos from my recent trip to New York. The architecture, nature, and energy of the city are incredible! What's your favorite spot in NYC or where would you love to visit next? 🥰",
+  content = "Me alegro mucho de compartir con ustedes algunas fotos de mi reciente viaje a Nueva York. ¡La arquitectura, la naturaleza y la energía de la ciudad son increíbles! ¿Cuál es tu lugar favorito de NYC?",
+  translatedContent = "I'm so glad to share with you guys some photos from my recent trip to New York. The architecture, nature, and energy of the city are incredible! What is your favorite place in NYC?",
   hashtags = ['#NewYorkCity', '#TravelDiaries', '#Wanderlust', '#Architecture'],
   images = [
     '/ny_skyscrapers.jpg',
@@ -353,6 +434,14 @@ export function SocialPostCard({
   initialLikes = 245,
   initialSharesCount = 12,
   initialViews = 3420,
+  analytics = {
+    views: 3420,
+    impressionsFeed: 2223,
+    impressionsSearch: 684,
+    impressionsDirect: 513,
+    engagementRate: 98.4,
+    clicks: 412
+  },
   initialComments = [
     {
       id: 'c1',
@@ -394,7 +483,7 @@ export function SocialPostCard({
     }
   ]
 }: SocialPostProps) {
-  // Post States
+  // Post Core State
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>('love');
   const [likesCount, setLikesCount] = useState(initialLikes);
   const [sharesCount, setSharesCount] = useState(initialSharesCount);
@@ -402,17 +491,23 @@ export function SocialPostCard({
   const [isSaved, setIsSaved] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // Translation Toggle State
+  const [showTranslation, setShowTranslation] = useState(false);
+
   // Poll State
   const [pollState, setPollState] = useState<PollData | undefined>(poll);
 
-  // Modals & Menu
+  // Modals
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [showReactionUsersModal, setShowReactionUsersModal] = useState(false);
+  const [activeReactionTab, setActiveReactionTab] = useState<'all' | ReactionType>('all');
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [postText, setPostText] = useState(content);
 
-  // Comments Stream Panel
+  // Discussion Comments Panel
   const [isCommentsOpen, setIsCommentsOpen] = useState(true);
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newCommentText, setNewCommentText] = useState('');
@@ -424,7 +519,7 @@ export function SocialPostCard({
   // Lightbox Modal
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  // Debounced Comment Search & Virtualization
+  // Debounced Search & Virtualization
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [commentScrollTop, setCommentScrollTop] = useState(0);
@@ -432,6 +527,33 @@ export function SocialPostCard({
 
   const [notification, setNotification] = useState<string | null>(null);
   const reactionTimeoutRef = useRef<any>(null);
+
+  // Auto-Hydration from IndexedDB
+  useEffect(() => {
+    idbLoadPostState('mainPost').then((stored) => {
+      if (stored) {
+        if (stored.likesCount !== undefined) setLikesCount(stored.likesCount);
+        if (stored.currentReaction !== undefined) setCurrentReaction(stored.currentReaction);
+        if (stored.isSaved !== undefined) setIsSaved(stored.isSaved);
+        if (stored.comments) setComments(stored.comments);
+        if (stored.pollState) setPollState(stored.pollState);
+      }
+    });
+  }, []);
+
+  // Auto-Save to IndexedDB on State Change
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      idbSavePostState('mainPost', {
+        likesCount,
+        currentReaction,
+        isSaved,
+        comments,
+        pollState
+      });
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [likesCount, currentReaction, isSaved, comments, pollState]);
 
   // Debounce search query effect
   useEffect(() => {
@@ -462,7 +584,7 @@ export function SocialPostCard({
     } catch {}
   }, [soundEnabled]);
 
-  // Deep Logic 1: Optimistic Multi-Reaction Engine
+  // Optimistic Reactions
   const handleSelectReaction = useCallback((type: ReactionType) => {
     playSoundEffect(660);
     setCurrentReaction(prev => {
@@ -478,7 +600,7 @@ export function SocialPostCard({
     setShowReactionPicker(false);
   }, [playSoundEffect, showToast]);
 
-  // Deep Logic 2: Interactive Poll Vote Handler
+  // Poll Vote Handler
   const handleVotePoll = useCallback((optionId: string) => {
     if (!pollState) return;
     playSoundEffect(880);
@@ -486,7 +608,7 @@ export function SocialPostCard({
     setPollState(prev => {
       if (!prev) return prev;
       const currentVoted = prev.userVotedOptionId;
-      if (currentVoted === optionId) return prev; // Already voted for this option
+      if (currentVoted === optionId) return prev;
 
       const updatedOptions = prev.options.map(opt => {
         if (opt.id === optionId) {
@@ -519,7 +641,7 @@ export function SocialPostCard({
     setShowMenu(false);
   }, [playSoundEffect, showToast]);
 
-  // Optimistic Comment Submission
+  // Add Top-Level Comment
   const handleAddComment = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim()) return;
@@ -543,6 +665,34 @@ export function SocialPostCard({
     showToast('Comment posted! 🚀');
   }, [newCommentText, playSoundEffect, showToast]);
 
+  // Add Nested Reply to Specific Comment
+  const handleAddReplyToComment = useCallback((commentId: string, replyText: string) => {
+    playSoundEffect();
+    const newReply: Comment = {
+      id: `r_${Date.now()}`,
+      author: {
+        name: 'You',
+        avatar: ''
+      },
+      timestamp: 'Just now',
+      text: replyText,
+      likes: 0
+    };
+
+    setComments(prev => prev.map(c => {
+      if (c.id === commentId) {
+        return {
+          ...c,
+          replies: [...(c.replies || []), newReply]
+        };
+      }
+      return c;
+    }));
+
+    setShowReplies(prev => ({ ...prev, [commentId]: true }));
+    showToast('Reply posted! 💬');
+  }, [playSoundEffect, showToast]);
+
   const handleToggleCommentLike = useCallback((commentId: string) => {
     playSoundEffect();
     setComments(prev => prev.map(c => {
@@ -564,11 +714,6 @@ export function SocialPostCard({
 
   const handleToggleReplies = useCallback((id: string) => {
     setShowReplies(prev => ({ ...prev, [id]: !prev[id] }));
-  }, []);
-
-  const handleReplyPrompt = useCallback((authorName: string) => {
-    setNewCommentText(`@${authorName} `);
-    document.getElementById('side-comment-input')?.focus();
   }, []);
 
   // Filtered Comments List
@@ -602,6 +747,15 @@ export function SocialPostCard({
     };
   }, [filteredComments, commentScrollTop]);
 
+  // Mock Reaction Users List for Reactions Breakdown Modal
+  const mockReactionUsers: ReactionUser[] = useMemo(() => [
+    { id: 'u1', name: 'Ray Hammond', avatar: author.avatar, reaction: 'love', badge: 'Author' },
+    { id: 'u2', name: 'Cynthia Henry', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', reaction: 'love', badge: 'Top Fan' },
+    { id: 'u3', name: 'Marcus Vance', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', reaction: 'fire' },
+    { id: 'u4', name: 'Elena Rostova', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', reaction: 'like' },
+    { id: 'u5', name: 'Devon Lane', avatar: '', reaction: 'haha' }
+  ], [author.avatar]);
+
   const activeReactionObj = useMemo(() => REACTIONS.find(r => r.type === currentReaction), [currentReaction]);
 
   return (
@@ -623,7 +777,10 @@ export function SocialPostCard({
       <div className={`grid grid-cols-1 ${isCommentsOpen ? 'lg:grid-cols-12' : 'max-w-3xl mx-auto'} gap-6 transition-all duration-500 ease-in-out`}>
         
         {/* LEFT COLUMN: Main Social Post Card */}
-        <article className={`${isCommentsOpen ? 'lg:col-span-7' : 'w-full'} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl transition-all relative text-slate-900 dark:text-slate-100 flex flex-col justify-between`}>
+        <article 
+          data-state="open"
+          className={`${isCommentsOpen ? 'lg:col-span-7' : 'w-full'} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl transition-all relative text-slate-900 dark:text-slate-100 flex flex-col justify-between`}
+        >
           
           <div>
             {/* Header */}
@@ -762,9 +919,21 @@ export function SocialPostCard({
                 </div>
               </div>
             ) : (
-              <p className="text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-relaxed mb-3 font-normal">
-                {postText}
-              </p>
+              <div className="space-y-2 mb-3">
+                <p className="text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-relaxed font-normal">
+                  {showTranslation ? translatedContent : postText}
+                </p>
+                {translatedContent && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTranslation(!showTranslation)}
+                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Languages className="w-3.5 h-3.5" />
+                    {showTranslation ? 'See original text' : 'See translation (English)'}
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Hashtags Chips */}
@@ -781,7 +950,7 @@ export function SocialPostCard({
               </div>
             )}
 
-            {/* DEEP LOGIC FEATURE: REAL-TIME INTERACTIVE POLL WIDGET */}
+            {/* REAL-TIME INTERACTIVE SURVEY POLL WIDGET */}
             {pollState && <PollWidget poll={pollState} onVote={handleVotePoll} />}
 
             {/* Media Gallery (0 CLS Aspect-Ratio Locked Grid) */}
@@ -816,15 +985,23 @@ export function SocialPostCard({
             {/* Analytics Summary */}
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4 pt-1 border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-medium">
+                <button
+                  type="button"
+                  onClick={() => setShowAnalyticsModal(true)}
+                  className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-medium hover:text-blue-500 transition cursor-pointer"
+                >
                   <Eye className="w-3.5 h-3.5 text-blue-500" />
                   {viewsCount.toLocaleString()} Views
-                </span>
+                </button>
                 <span>•</span>
-                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                <button
+                  type="button"
+                  onClick={() => setShowAnalyticsModal(true)}
+                  className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium hover:underline cursor-pointer"
+                >
                   <TrendingUp className="w-3.5 h-3.5" />
                   98.4% Engagement
-                </span>
+                </button>
               </div>
 
               {isSaved && (
@@ -834,18 +1011,22 @@ export function SocialPostCard({
               )}
             </div>
 
-            {/* Reaction Counts Summary */}
+            {/* Reaction Counts Summary with Modal Trigger */}
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
+              <button 
+                type="button"
+                onClick={() => setShowReactionUsersModal(true)}
+                className="flex items-center gap-2.5 hover:opacity-80 transition cursor-pointer text-left"
+              >
                 <div className="flex -space-x-2 overflow-hidden">
                   <span className="inline-flex items-center justify-center h-6.5 w-6.5 rounded-full bg-rose-500 text-white ring-2 ring-white dark:ring-slate-900 text-xs shadow-xs">❤️</span>
                   <span className="inline-flex items-center justify-center h-6.5 w-6.5 rounded-full bg-amber-500 text-white ring-2 ring-white dark:ring-slate-900 text-xs shadow-xs">🔥</span>
                   <span className="inline-flex items-center justify-center h-6.5 w-6.5 rounded-full bg-blue-500 text-white ring-2 ring-white dark:ring-slate-900 text-xs shadow-xs">👍</span>
                 </div>
-                <span className="text-slate-700 dark:text-slate-200 text-xs font-semibold">
+                <span className="text-slate-700 dark:text-slate-200 text-xs font-semibold hover:underline">
                   {activeReactionObj ? `${activeReactionObj.emoji} You and ${likesCount - 1} others` : `${likesCount} Reactions`}
                 </span>
-              </div>
+              </button>
 
               <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
                 <button 
@@ -895,6 +1076,7 @@ export function SocialPostCard({
             >
               <button
                 type="button"
+                data-liked={currentReaction ? "true" : "false"}
                 onClick={() => handleSelectReaction(currentReaction || 'love')}
                 className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none ${
                   activeReactionObj ? `${activeReactionObj.color} font-bold ${activeReactionObj.bg}` : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
@@ -1017,7 +1199,7 @@ export function SocialPostCard({
                       key={comment.id} 
                       comment={comment} 
                       onLike={handleToggleCommentLike} 
-                      onReply={handleReplyPrompt} 
+                      onAddReply={handleAddReplyToComment} 
                       isPlayingAudio={!!isPlayingAudio[comment.id]} 
                       onToggleVoice={handleToggleVoicePlay} 
                       showReplies={!!showReplies[comment.id]} 
@@ -1084,6 +1266,146 @@ export function SocialPostCard({
         )}
 
       </div>
+
+      {/* Analytics Breakdown Modal */}
+      {showAnalyticsModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowAnalyticsModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-base flex items-center gap-2 text-slate-900 dark:text-white">
+                <PieChart className="w-5 h-5 text-blue-500" />
+                Post Performance Analytics
+              </h3>
+              <button type="button" onClick={() => setShowAnalyticsModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="text-slate-400 text-[10px] uppercase font-bold">Total Views</div>
+                <div className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-0.5">{analytics.views.toLocaleString()}</div>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="text-slate-400 text-[10px] uppercase font-bold">Engagement Rate</div>
+                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{analytics.engagementRate}%</div>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="text-slate-400 text-[10px] uppercase font-bold">Link Clicks</div>
+                <div className="text-lg font-bold text-purple-600 dark:text-purple-400 mt-0.5">{analytics.clicks}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-300">Impressions Breakdown:</div>
+              <div className="space-y-1.5 text-xs">
+                <div>
+                  <div className="flex justify-between text-slate-500 text-[11px] mb-0.5">
+                    <span>Main Feed</span>
+                    <span className="font-mono font-bold">65% ({analytics.impressionsFeed})</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '65%' }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-slate-500 text-[11px] mb-0.5">
+                    <span>Search &amp; Hashtags</span>
+                    <span className="font-mono font-bold">20% ({analytics.impressionsSearch})</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '20%' }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-slate-500 text-[11px] mb-0.5">
+                    <span>Direct Links</span>
+                    <span className="font-mono font-bold">15% ({analytics.impressionsDirect})</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded-full" style={{ width: '15%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reactions Users Breakdown Modal */}
+      {showReactionUsersModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowReactionUsersModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-base flex items-center gap-2 text-slate-900 dark:text-white">
+                <Users className="w-5 h-5 text-rose-500" />
+                Post Reactions ({likesCount})
+              </h3>
+              <button type="button" onClick={() => setShowReactionUsersModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveReactionTab('all')}
+                className={`px-3 py-1 rounded-lg font-semibold transition cursor-pointer shrink-0 ${activeReactionTab === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                All ({likesCount})
+              </button>
+              {REACTIONS.map(r => (
+                <button
+                  key={r.type}
+                  type="button"
+                  onClick={() => setActiveReactionTab(r.type)}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer shrink-0 flex items-center gap-1 ${activeReactionTab === r.type ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  <span>{r.emoji}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {mockReactionUsers
+                .filter(u => activeReactionTab === 'all' || u.reaction === activeReactionTab)
+                .map(u => {
+                  const rObj = REACTIONS.find(r => r.type === u.reaction);
+                  return (
+                    <div key={u.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <AvatarWithFallback name={u.name} src={u.avatar} size="w-8 h-8" />
+                        <div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1">
+                            {u.name}
+                            {u.badge && (
+                              <span className="text-[9px] font-semibold bg-blue-100 text-blue-600 px-1.5 py-0.2 rounded-full">
+                                {u.badge}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-base" title={rObj?.label}>{rObj?.emoji}</span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       {showShareModal && (

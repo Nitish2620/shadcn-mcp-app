@@ -32,6 +32,14 @@ export interface PollData {
   expiresIn?: string;
 }
 
+export interface ReactionUser {
+  id: string;
+  name: string;
+  avatar: string;
+  reaction: ReactionType;
+  badge?: string;
+}
+
 export interface Comment {
   id: string;
   author: {
@@ -49,6 +57,15 @@ export interface Comment {
   replies?: Comment[];
 }
 
+export interface PostAnalytics {
+  views: number;
+  impressionsFeed: number;
+  impressionsSearch: number;
+  impressionsDirect: number;
+  engagementRate: number;
+  clicks: number;
+}
+
 export interface SocialPostProps {
   author?: {
     name: string;
@@ -59,11 +76,14 @@ export interface SocialPostProps {
   timestamp?: string;
   privacy?: 'public' | 'friends' | 'only_me';
   content?: string;
+  translatedContent?: string;
   hashtags?: string[];
   images?: string[];
+  videoUrl?: string;
   poll?: PollData;
   initialLikes?: number;
   initialSharesCount?: number;
   initialViews?: number;
   initialComments?: Comment[];
+  analytics?: PostAnalytics;
 }
