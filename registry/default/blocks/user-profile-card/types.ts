@@ -4,9 +4,22 @@ export type BannerEffect = 'none' | 'nebula' | 'matrix' | 'gold_dust' | 'sakura'
 
 export type NitroLevel = 'none' | 'level1' | 'level2' | 'level3';
 
-export type ProfileTab = 'posts' | 'media' | 'collectibles' | 'likes' | 'soundboard';
+export type SubscriptionTier = 'free' | 'nitro_basic' | 'nitro_pro';
+
+export type ProfileTab = 'posts' | 'media' | 'collectibles' | 'likes' | 'soundboard' | 'subscription';
 
 export type ProfileContext = 'global' | 'server';
+
+export interface SubscriptionPlan {
+  id: SubscriptionTier;
+  name: string;
+  price: string;
+  period: string;
+  badge: string;
+  color: string;
+  features: string[];
+  recommended?: boolean;
+}
 
 export interface ProfileBadge {
   id: string;
@@ -44,6 +57,7 @@ export interface NitroSound {
   emoji: string;
   freq: number;
   category: 'Meme' | 'Gaming' | 'Nitro Special';
+  lockedForFree?: boolean;
 }
 
 export interface NitroSticker {
@@ -69,6 +83,7 @@ export interface UserProfileData {
   avatarDecoration: AvatarDecoration;
   bannerEffect: BannerEffect;
   nitroLevel: NitroLevel;
+  subscriptionTier: SubscriptionTier;
   badges: ProfileBadge[];
   stats: UserProfileStats;
   // Server-Specific Profile Overrides

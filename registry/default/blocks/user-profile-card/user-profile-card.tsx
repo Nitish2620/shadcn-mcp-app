@@ -17,7 +17,6 @@ import {
   Sparkles, 
   Flame, 
   Diamond, 
-  MoreHorizontal, 
   Volume2, 
   VolumeX, 
   Plus, 
@@ -29,7 +28,12 @@ import {
   ShieldAlert,
   Music,
   Code2,
-  Sparkle
+  Sparkle,
+  Lock,
+  CreditCard,
+  CheckCircle,
+  Star,
+  MoreHorizontal
 } from 'lucide-react';
 import type { 
   UserProfileData, 
@@ -37,6 +41,8 @@ import type {
   AvatarDecoration, 
   BannerEffect, 
   NitroLevel, 
+  SubscriptionTier, 
+  SubscriptionPlan, 
   ProfileTab, 
   ProfileContext, 
   PostItem, 
@@ -44,10 +50,10 @@ import type {
   NitroSound 
 } from './types';
 
-export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, NitroLevel, ProfileTab, ProfileContext };
+export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, NitroLevel, SubscriptionTier, ProfileTab, ProfileContext };
 
 /* ========================================================
-   INDEXEDDB AUTO-PERSISTENCE ENGINE FOR PROFILE CARD
+   INDEXEDDB AUTO-PERSISTENCE ENGINE FOR PROFILE & SUBSCRIPTION
 ======================================================== */
 const DB_NAME = 'UserProfileCardDB';
 const DB_VERSION = 1;
@@ -92,16 +98,72 @@ async function idbLoadProfile(key: string): Promise<any> {
 }
 
 /* ========================================================
-   AVATAR DECORATION RENDERER (DISCORD NITRO FEATURE)
+   SUBSCRIPTION PLANS DEFINITION
 ======================================================== */
-const AvatarDecorationFrame = React.memo(({ decoration }: { decoration: AvatarDecoration }) => {
-  if (decoration === 'none') return null;
+const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'free',
+    name: 'Free Standard',
+    price: '$0',
+    period: 'forever',
+    badge: 'Basic',
+    color: 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 text-slate-800 dark:text-slate-200',
+    features: [
+      'Standard Avatar & Cover Photo',
+      'Basic Custom Status',
+      'View Feed Posts & Media Gallery',
+      'Standard Like & Share Reactions'
+    ]
+  },
+  {
+    id: 'nitro_basic',
+    name: 'Nitro Basic',
+    price: '$2.99',
+    period: 'per month',
+    badge: 'Popular',
+    color: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100',
+    features: [
+      'Custom Nitro Basic Badge',
+      '50MB High-Res File Uploads',
+      'Custom Emojis Everywhere',
+      'Nitro Special Reactions'
+    ]
+  },
+  {
+    id: 'nitro_pro',
+    name: 'Nitro Pro (Boost)',
+    price: '$9.99',
+    period: 'per month',
+    badge: 'Full Nitro Perks',
+    recommended: true,
+    color: 'border-purple-500 bg-gradient-to-br from-purple-900/30 via-indigo-900/20 to-slate-900 text-white shadow-xl shadow-purple-500/20',
+    features: [
+      'Unlock All 8 Animated Avatar Decorations',
+      'Unlock All 4 Animated Banner Effects',
+      'Full Nitro Soundboard Audio Sampler',
+      'Holographic Name Metallic Shimmer Animation',
+      '2 Free Server Boosts Included',
+      'Custom Vanity URL (discord.gg/ram)',
+      'Super Reaction Particle Explosions'
+    ]
+  }
+];
+
+/* ========================================================
+   AVATAR DECORATION RENDERER WITH MOTION
+======================================================== */
+const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decoration: AvatarDecoration; isUnlocked: boolean }) => {
+  if (decoration === 'none' || !isUnlocked) return null;
 
   if (decoration === 'crown') {
     return (
-      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-bounce">
+      <motion.div 
+        animate={{ y: [0, -6, 0] }}
+        transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+        className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+      >
         <Crown className="w-8 h-8 text-amber-400 fill-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
-      </div>
+      </motion.div>
     );
   }
 
@@ -150,10 +212,10 @@ const AvatarDecorationFrame = React.memo(({ decoration }: { decoration: AvatarDe
 AvatarDecorationFrame.displayName = 'AvatarDecorationFrame';
 
 /* ========================================================
-   BANER EFFECT OVERLAY RENDERER (DISCORD NITRO FEATURE)
+   BANER EFFECT OVERLAY RENDERER WITH MOTION
 ======================================================== */
-const BannerEffectOverlay = React.memo(({ effect }: { effect: BannerEffect }) => {
-  if (effect === 'none') return null;
+const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: BannerEffect; isUnlocked: boolean }) => {
+  if (effect === 'none' || !isUnlocked) return null;
 
   if (effect === 'nebula') {
     return (
@@ -164,7 +226,7 @@ const BannerEffectOverlay = React.memo(({ effect }: { effect: BannerEffect }) =>
   if (effect === 'matrix') {
     return (
       <div className="absolute inset-0 bg-emerald-950/20 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        <div className="w-full h-full opacity-25 bg-[radial-gradient(#34d399_1px,transparent_1px)] [background-size:16px_16px] animate-pulse" />
+        <div className="w-full h-full opacity-30 bg-[radial-gradient(#34d399_1.5px,transparent_1.5px)] [background-size:16px_16px] animate-pulse" />
       </div>
     );
   }
@@ -172,7 +234,7 @@ const BannerEffectOverlay = React.memo(({ effect }: { effect: BannerEffect }) =>
   if (effect === 'gold_dust') {
     return (
       <div className="absolute inset-0 bg-amber-500/10 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        <div className="w-full h-full opacity-30 bg-[radial-gradient(#fbbf24_1px,transparent_1px)] [background-size:20px_20px] animate-pulse" />
+        <div className="w-full h-full opacity-35 bg-[radial-gradient(#fbbf24_1.5px,transparent_1.5px)] [background-size:20px_20px] animate-pulse" />
       </div>
     );
   }
@@ -206,6 +268,7 @@ export function UserProfileCard({
     avatarDecoration: 'neon',
     bannerEffect: 'nebula',
     nitroLevel: 'level3',
+    subscriptionTier: 'nitro_pro',
     badges: [
       { id: 'b1', name: 'Server Booster (Level 3)', iconName: 'Zap', color: 'text-pink-400 bg-pink-950/60 border-pink-500/40', description: 'Boosting servers since 2022' },
       { id: 'b2', name: 'Nitro Subscriber', iconName: 'Crown', color: 'text-amber-400 bg-amber-950/60 border-amber-500/40', description: 'Discord Nitro Perks Active' },
@@ -229,8 +292,9 @@ export function UserProfileCard({
   },
   onUpdateProfile
 }: UserProfileCardProps) {
-  // Profile State
+  // Core Profile & Subscription State
   const [profile, setProfile] = useState<UserProfileData>(initialProfile);
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>(initialProfile.subscriptionTier || 'nitro_pro');
   const [profileContext, setProfileContext] = useState<ProfileContext>('global');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(initialProfile.stats.followers);
@@ -238,6 +302,7 @@ export function UserProfileCard({
   const [boostCount, setBoostCount] = useState(initialProfile.stats.boostCount);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -252,11 +317,16 @@ export function UserProfileCard({
   const [editDecoration, setEditDecoration] = useState<AvatarDecoration>(profile.avatarDecoration);
   const [editBannerEffect, setEditBannerEffect] = useState<BannerEffect>(profile.bannerEffect);
 
+  // Feature Lock Helpers
+  const isNitroPro = subscriptionTier === 'nitro_pro';
+  const isNitroBasicOrHigher = subscriptionTier === 'nitro_basic' || subscriptionTier === 'nitro_pro';
+
   // Auto-Hydration from IndexedDB
   useEffect(() => {
     idbLoadProfile('userProfileState').then(stored => {
       if (stored) {
         setProfile(prev => ({ ...prev, ...stored }));
+        if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
         if (stored.stats?.boostCount !== undefined) setBoostCount(stored.stats.boostCount);
         if (stored.stats?.likes !== undefined) setLikesCount(stored.stats.likes);
       }
@@ -268,18 +338,19 @@ export function UserProfileCard({
     const handler = setTimeout(() => {
       idbSaveProfile('userProfileState', {
         ...profile,
+        subscriptionTier,
         stats: { ...profile.stats, boostCount, likes: likesCount }
       });
     }, 500);
     return () => clearTimeout(handler);
-  }, [profile, boostCount, likesCount]);
+  }, [profile, subscriptionTier, boostCount, likesCount]);
 
   const showToast = useCallback((msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 2500);
   }, []);
 
-  // Web Audio Synthesizer Engine for Haptic Sound Effects
+  // Web Audio Synthesizer Engine
   const playHapticSound = useCallback((freq = 520, type: OscillatorType = 'sine') => {
     if (!soundEnabled) return;
     try {
@@ -297,19 +368,13 @@ export function UserProfileCard({
     } catch {}
   }, [soundEnabled]);
 
-  // Trigger Soundboard Audio Clips
-  const playSoundboardClip = useCallback((sound: NitroSound) => {
-    playHapticSound(sound.freq, 'triangle');
-    showToast(`Played Soundboard: ${sound.emoji} ${sound.name}`);
-  }, [playHapticSound, showToast]);
-
-  // Super Reaction Particle Blast
+  // Particle Blast Trigger
   const triggerParticleBlast = useCallback((e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const newParticles = Array.from({ length: 8 }).map((_, i) => ({
+    const newParticles = Array.from({ length: 12 }).map((_, i) => ({
       id: Date.now() + i,
-      x: e.clientX - rect.left + (Math.random() * 40 - 20),
-      y: e.clientY - rect.top + (Math.random() * 40 - 20)
+      x: e.clientX - rect.left + (Math.random() * 50 - 25),
+      y: e.clientY - rect.top + (Math.random() * 50 - 25)
     }));
     setParticles(prev => [...prev, ...newParticles]);
     setTimeout(() => {
@@ -317,14 +382,40 @@ export function UserProfileCard({
     }, 1000);
   }, []);
 
-  // Handle Nitro Super Boost
+  // Select Subscription Plan Trigger
+  const handleSelectSubscription = useCallback((tier: SubscriptionTier) => {
+    playHapticSound(900, 'triangle');
+    setSubscriptionTier(tier);
+    setProfile(prev => ({ ...prev, subscriptionTier: tier }));
+    setIsSubscriptionModalOpen(false);
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === tier);
+    showToast(`Subscribed to ${plan?.name}! Features Unlocked & Saved to IndexedDB 🚀`);
+  }, [playHapticSound, showToast]);
+
+  // Soundboard Player with Gating
+  const playSoundboardClip = useCallback((sound: NitroSound) => {
+    if (!isNitroPro && sound.category === 'Nitro Special') {
+      showToast('🔒 Soundboard locked! Upgrade to Nitro Pro to unlock audio clips');
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
+    playHapticSound(sound.freq, 'triangle');
+    showToast(`Played Soundboard: ${sound.emoji} ${sound.name}`);
+  }, [isNitroPro, playHapticSound, showToast]);
+
+  // Nitro Super Boost
   const handleNitroBoost = useCallback((e: React.MouseEvent) => {
+    if (!isNitroPro) {
+      showToast('🔒 Server Boosting requires Nitro Pro Subscription');
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
     playHapticSound(880, 'square');
     triggerParticleBlast(e);
     setBoostCount(b => b + 1);
     setLikesCount(l => l + 50);
     showToast('Nitro Super Boosted Level 3! 🚀✨ (+50 Likes)');
-  }, [playHapticSound, triggerParticleBlast, showToast]);
+  }, [isNitroPro, playHapticSound, triggerParticleBlast, showToast]);
 
   // Save Settings
   const handleSaveSettings = useCallback(() => {
@@ -335,14 +426,14 @@ export function UserProfileCard({
       handle: editHandle.trim() || profile.handle,
       bio: editBio.trim() || profile.bio,
       customStatus: editStatus.trim(),
-      avatarDecoration: editDecoration,
-      bannerEffect: editBannerEffect
+      avatarDecoration: isNitroPro ? editDecoration : 'none',
+      bannerEffect: isNitroPro ? editBannerEffect : 'none'
     };
     setProfile(updated);
     if (onUpdateProfile) onUpdateProfile(updated);
     setIsSettingsOpen(false);
     showToast('Nitro Profile Settings Saved to IndexedDB! ✨');
-  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, profile, playHapticSound, showToast, onUpdateProfile]);
+  }, [editName, editHandle, editBio, editStatus, editDecoration, editBannerEffect, isNitroPro, profile, playHapticSound, showToast, onUpdateProfile]);
 
   // Mock Data
   const mockPosts: PostItem[] = useMemo(() => [
@@ -376,8 +467,8 @@ export function UserProfileCard({
     { id: 'sb2', name: 'Quack Quack', emoji: '🦆', freq: 440, category: 'Meme' },
     { id: 'sb3', name: 'Victory Horn', emoji: '🎺', freq: 880, category: 'Gaming' },
     { id: 'sb4', name: 'GG WP Chime', emoji: '🎮', freq: 620, category: 'Gaming' },
-    { id: 'sb5', name: 'Super Laser Blast', emoji: '⚡', freq: 950, category: 'Nitro Special' }
-  ], []);
+    { id: 'sb5', name: 'Super Laser Blast', emoji: '⚡', freq: 950, category: 'Nitro Special', lockedForFree: !isNitroPro }
+  ], [isNitroPro]);
 
   const mockCollectibles: NitroSticker[] = useMemo(() => [
     { id: 's1', name: 'Cyberpunk Neon Wave', emoji: '🌌', rarity: 'Nitro Exclusive', animated: true },
@@ -388,6 +479,7 @@ export function UserProfileCard({
 
   const currentBanner = profileContext === 'server' ? (profile.serverBanner || profile.banner) : profile.banner;
   const currentDisplayName = profileContext === 'server' ? (profile.serverNickname || profile.name) : profile.name;
+  const activePlan = SUBSCRIPTION_PLANS.find(p => p.id === subscriptionTier);
 
   return (
     <Tooltip.Provider>
@@ -410,9 +502,10 @@ export function UserProfileCard({
           )}
         </AnimatePresence>
 
-        {/* Global vs Server Profile Switcher Header */}
-        <div className="flex items-center justify-between mb-3 px-2">
-          <div className="flex items-center gap-1.5 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-300 dark:border-slate-700 text-xs">
+        {/* Global vs Server Profile Switcher & Subscription Plan Pill */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 px-2">
+          
+          <div className="flex items-center gap-1.5 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-300 dark:border-slate-700 text-xs self-start">
             <button
               type="button"
               onClick={() => { playHapticSound(500); setProfileContext('global'); }}
@@ -435,34 +528,43 @@ export function UserProfileCard({
             </button>
           </div>
 
-          {profile.vanityUrl && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2.5 py-1 rounded-xl border border-purple-200 dark:border-purple-800">
-              <Code2 className="w-3 h-3" />
-              {profile.vanityUrl}
-            </span>
-          )}
+          {/* Active Subscription Badge Trigger */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsSubscriptionModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition transform hover:scale-105 cursor-pointer"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span>Plan: {activePlan?.name}</span>
+              <Sparkles className="w-3 h-3 text-amber-300" />
+            </button>
+          </div>
+
         </div>
 
-        {/* MAIN PROFILE CARD */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl transition-all relative">
+        {/* MAIN PROFILE CARD WITH NITRO AURORA BORDER FLARE */}
+        <div className={`bg-white dark:bg-slate-900 border rounded-3xl overflow-hidden shadow-2xl transition-all relative ${
+          isNitroPro ? 'border-purple-500/80 shadow-purple-500/20' : 'border-slate-200 dark:border-slate-800'
+        }`}>
           
-          {/* Animated Particles Overlay */}
+          {/* Animated Particles Explosion Overlay */}
           {particles.map(p => (
             <motion.span
               key={p.id}
               initial={{ scale: 1, opacity: 1 }}
-              animate={{ y: -60, opacity: 0, scale: 1.5 }}
-              transition={{ duration: 0.8 }}
+              animate={{ y: -70, opacity: 0, scale: 1.8 }}
+              transition={{ duration: 0.9 }}
               className="absolute z-50 text-xl pointer-events-none"
               style={{ left: p.x, top: p.y }}
             >
-              ✨🚀
+              ✨🚀👑
             </motion.span>
           ))}
 
           {/* COVER BANNER SECTION WITH BANNER EFFECTS */}
           <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-slate-950">
-            <BannerEffectOverlay effect={profile.bannerEffect} />
+            <BannerEffectOverlay effect={profile.bannerEffect} isUnlocked={isNitroPro} />
             <img
               src={currentBanner}
               alt="Profile Cover Banner"
@@ -476,12 +578,14 @@ export function UserProfileCard({
             <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-900/80 text-amber-300 border border-amber-500/40 backdrop-blur-md shadow-lg">
                 <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                Nitro Level 3 Boosted
+                {isNitroPro ? 'Nitro Level 3 Boosted' : 'Free User Profile'}
               </span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-950/80 text-purple-300 border border-purple-500/40 backdrop-blur-md">
-                <Zap className="w-3 h-3 text-purple-400" />
-                {boostCount} Server Boosts
-              </span>
+              {isNitroPro && (
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-950/80 text-purple-300 border border-purple-500/40 backdrop-blur-md">
+                  <Zap className="w-3 h-3 text-purple-400" />
+                  {boostCount} Server Boosts
+                </span>
+              )}
             </div>
 
             {/* Audio Toggle */}
@@ -503,10 +607,14 @@ export function UserProfileCard({
             
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-6">
               
-              {/* Avatar with Nitro Decoration Ring */}
-              <div className="relative group self-start sm:self-auto z-20">
+              {/* Avatar with Nitro Decoration Ring & 3D Tilt Hover */}
+              <motion.div 
+                whileHover={{ scale: 1.05, rotate: 2 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+                className="relative group self-start sm:self-auto z-20"
+              >
                 <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full ring-4 ring-white dark:ring-slate-900 shadow-2xl bg-slate-800">
-                  <AvatarDecorationFrame decoration={profile.avatarDecoration} />
+                  <AvatarDecorationFrame decoration={profile.avatarDecoration} isUnlocked={isNitroPro} />
                   <img
                     src={profile.avatar}
                     alt={currentDisplayName}
@@ -519,7 +627,7 @@ export function UserProfileCard({
                     title="Online & Custom Status Active"
                   />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2.5 flex-wrap sm:mb-2 z-20">
@@ -547,9 +655,11 @@ export function UserProfileCard({
                 <button
                   type="button"
                   onClick={handleNitroBoost}
-                  className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md"
+                  className={`px-4 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md ${
+                    isNitroPro ? 'bg-pink-600 hover:bg-pink-700' : 'bg-slate-800 text-slate-400'
+                  }`}
                 >
-                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                  {isNitroPro ? <Zap className="w-4 h-4 text-amber-300 fill-amber-300" /> : <Lock className="w-3.5 h-3.5" />}
                   <span>Boost ({boostCount})</span>
                 </button>
 
@@ -668,7 +778,10 @@ export function UserProfileCard({
 
                         {/* Avatar Decoration Picker */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Nitro Avatar Decoration</label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Nitro Avatar Decoration</label>
+                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Nitro Pro</span>}
+                          </div>
                           <div className="grid grid-cols-3 gap-2">
                             {[
                               { id: 'none', label: 'None', emoji: '⚪' },
@@ -683,7 +796,14 @@ export function UserProfileCard({
                               <button
                                 key={item.id}
                                 type="button"
-                                onClick={() => setEditDecoration(item.id as AvatarDecoration)}
+                                onClick={() => {
+                                  if (!isNitroPro && item.id !== 'none') {
+                                    showToast('🔒 Requires Nitro Pro Subscription');
+                                    setIsSubscriptionModalOpen(true);
+                                    return;
+                                  }
+                                  setEditDecoration(item.id as AvatarDecoration);
+                                }}
                                 className={`p-2 rounded-xl text-xs font-medium border flex items-center gap-1.5 justify-center cursor-pointer transition ${
                                   editDecoration === item.id 
                                     ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-600 font-bold' 
@@ -699,7 +819,10 @@ export function UserProfileCard({
 
                         {/* Banner Effect Picker */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Nitro Banner Animated Effect</label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Nitro Banner Effect</label>
+                            {!isNitroPro && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Requires Nitro Pro</span>}
+                          </div>
                           <div className="grid grid-cols-2 gap-2">
                             {[
                               { id: 'none', label: 'None', emoji: '🚫' },
@@ -710,7 +833,14 @@ export function UserProfileCard({
                               <button
                                 key={item.id}
                                 type="button"
-                                onClick={() => setEditBannerEffect(item.id as BannerEffect)}
+                                onClick={() => {
+                                  if (!isNitroPro && item.id !== 'none') {
+                                    showToast('🔒 Requires Nitro Pro Subscription');
+                                    setIsSubscriptionModalOpen(true);
+                                    return;
+                                  }
+                                  setEditBannerEffect(item.id as BannerEffect);
+                                }}
                                 className={`p-2.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 justify-center cursor-pointer transition ${
                                   editBannerEffect === item.id 
                                     ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-600 font-bold' 
@@ -747,10 +877,12 @@ export function UserProfileCard({
               </div>
             </div>
 
-            {/* Name & Handle */}
+            {/* Name with Holographic Shimmer Effect */}
             <div className="space-y-1 mb-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+                <h2 className={`text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-1.5 ${
+                  isNitroPro ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent animate-pulse' : 'text-slate-900 dark:text-white'
+                }`}>
                   {currentDisplayName}
                   {profile.verified && (
                     <CheckCircle2 className="w-5 h-5 text-purple-500 fill-purple-500/20" />
@@ -932,15 +1064,15 @@ export function UserProfileCard({
                   </Tabs.Trigger>
 
                   <Tabs.Trigger
-                    value="likes"
+                    value="subscription"
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                      activeTab === 'likes'
-                        ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-md'
-                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                      activeTab === 'subscription'
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                        : 'text-purple-600 dark:text-purple-400 hover:text-purple-800'
                     }`}
                   >
-                    <Heart className="w-4 h-4 text-rose-500" />
-                    <span>Likes</span>
+                    <Crown className="w-4 h-4 text-amber-300" />
+                    <span>Nitro Tiers</span>
                   </Tabs.Trigger>
 
                 </Tabs.List>
@@ -1001,12 +1133,19 @@ export function UserProfileCard({
                       key={sound.id}
                       type="button"
                       onClick={() => playSoundboardClip(sound)}
-                      className="bg-slate-50/80 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-left hover:border-purple-500/50 transition cursor-pointer group"
+                      className={`p-4 rounded-2xl border flex items-center justify-between text-left transition cursor-pointer group ${
+                        sound.lockedForFree 
+                          ? 'bg-slate-100/60 dark:bg-slate-800/20 border-slate-200 dark:border-slate-800 opacity-60' 
+                          : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:border-purple-500/50'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-2xl group-hover:scale-125 transition transform">{sound.emoji}</span>
                         <div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-white">{sound.name}</div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1">
+                            {sound.name}
+                            {sound.lockedForFree && <Lock className="w-3 h-3 text-amber-500" />}
+                          </div>
                           <span className="text-[10px] font-semibold text-purple-500">{sound.category}</span>
                         </div>
                       </div>
@@ -1042,18 +1181,75 @@ export function UserProfileCard({
                           <span className="text-[10px] font-semibold text-purple-500">{item.rarity}</span>
                         </div>
                       </div>
-                      <Sparkle className="w-4 h-4 text-amber-400" />
+                      <Sparkles className="w-4 h-4 text-amber-400" />
                     </div>
                   ))}
                 </div>
               </Tabs.Content>
 
-              {/* LIKES TAB CONTENT */}
-              <Tabs.Content value="likes" className="outline-none">
-                <div className="p-12 text-center bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-2">
-                  <Heart className="w-8 h-8 text-rose-400 mx-auto" />
-                  <div className="font-bold text-sm text-slate-800 dark:text-slate-200">No Liked Posts Hidden</div>
-                  <div className="text-xs text-slate-400">Posts you like will appear here for easy access</div>
+              {/* NITRO SUBSCRIPTION TIERS TAB CONTENT */}
+              <Tabs.Content value="subscription" className="outline-none space-y-4">
+                <div className="text-center max-w-xl mx-auto space-y-2 mb-6">
+                  <h3 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center justify-center gap-2">
+                    <Crown className="w-6 h-6 text-amber-400 fill-amber-400" />
+                    Upgrade Your Profile to Discord Nitro
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Selecting a subscription plan instantly unlocks all avatar decorations, banner effects, soundboard clips, and persists state in IndexedDB!
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {SUBSCRIPTION_PLANS.map(plan => {
+                    const isSelected = subscriptionTier === plan.id;
+                    return (
+                      <div 
+                        key={plan.id}
+                        className={`rounded-3xl p-6 border flex flex-col justify-between relative transition-all duration-300 ${plan.color} ${
+                          isSelected ? 'ring-2 ring-purple-500 shadow-2xl scale-102' : 'hover:border-purple-400/60'
+                        }`}
+                      >
+                        {plan.recommended && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-pink-500 text-slate-900 font-extrabold text-[10px] uppercase px-3 py-0.5 rounded-full shadow-lg">
+                            FULL NITRO UNLOCKED
+                          </div>
+                        )}
+
+                        <div className="space-y-4">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 dark:bg-slate-800/80 px-2.5 py-1 rounded-full">
+                              {plan.badge}
+                            </span>
+                            <h4 className="text-lg font-extrabold mt-3">{plan.name}</h4>
+                            <div className="text-2xl font-black mt-1">
+                              {plan.price} <span className="text-xs font-normal opacity-80">/{plan.period}</span>
+                            </div>
+                          </div>
+
+                          <ul className="space-y-2.5 text-xs font-medium">
+                            {plan.features.map((feat, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                <span>{feat}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectSubscription(plan.id)}
+                          className={`w-full py-2.5 rounded-xl font-bold text-xs mt-6 transition cursor-pointer shadow-md ${
+                            isSelected 
+                              ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' 
+                              : 'bg-purple-600 hover:bg-purple-700 text-white'
+                          }`}
+                        >
+                          {isSelected ? 'Active Plan (IndexedDB Saved)' : `Switch to ${plan.name}`}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </Tabs.Content>
 
@@ -1064,6 +1260,69 @@ export function UserProfileCard({
         </div>
 
       </div>
+
+      {/* RADIX UI DIALOG MODAL FOR NITRO SUBSCRIPTION PAYWALL */}
+      <Dialog.Root open={isSubscriptionModalOpen} onOpenChange={setIsSubscriptionModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 animate-in fade-in" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl z-50 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+              <Dialog.Title className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Crown className="w-5 h-5 text-amber-400 fill-amber-400" />
+                Unlock Discord Nitro Pro Perks
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button type="button" className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </Dialog.Close>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Select a subscription plan below to unlock all avatar decorations, animated banners, full soundboard clips, and server boost perks! State is saved to IndexedDB.
+              </p>
+
+              <div className="space-y-3">
+                {SUBSCRIPTION_PLANS.map(plan => {
+                  const isSelected = subscriptionTier === plan.id;
+                  return (
+                    <div 
+                      key={plan.id}
+                      className={`p-4 rounded-2xl border flex items-center justify-between transition cursor-pointer ${
+                        isSelected 
+                          ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/50' 
+                          : 'border-slate-200 dark:border-slate-800 hover:border-purple-400'
+                      }`}
+                      onClick={() => handleSelectSubscription(plan.id)}
+                    >
+                      <div>
+                        <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                          {plan.name}
+                          {isSelected && <span className="text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.2 rounded-full font-bold">Active</span>}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">{plan.price} / {plan.period}</div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={`px-4 py-1.5 rounded-xl font-bold text-xs cursor-pointer ${
+                          isSelected ? 'bg-emerald-500 text-slate-950' : 'bg-purple-600 text-white'
+                        }`}
+                      >
+                        {isSelected ? 'Selected' : 'Choose'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
     </Tooltip.Provider>
   );
 }
