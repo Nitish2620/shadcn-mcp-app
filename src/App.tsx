@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { UserProfileCard } from '../registry/default/blocks/user-profile-card/user-profile-card';
 import { SocialPostCard } from '../registry/default/blocks/social-post-card/social-post-card';
 import { ChatListCard } from '../registry/default/blocks/chat-list-card/chat-list-card';
 import { PricingTable } from '../registry/default/blocks/pricing-table/pricing-table';
-import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, ShieldCheck, Key, Lock, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid } from 'lucide-react';
+import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid } from 'lucide-react';
 
 interface ComponentItem {
   id: string;
@@ -16,6 +17,16 @@ interface ComponentItem {
 }
 
 const CATALOG_COMPONENTS: ComponentItem[] = [
+  {
+    id: 'user-profile-card',
+    name: 'user-profile-card',
+    title: 'User Profile Card (Nitro Edition)',
+    description: 'MNC-grade user & creator profile card with Discord Nitro features, Radix UI primitives, animated avatar decorations, and responsive metrics dashboard.',
+    category: 'User & Profile',
+    badge: 'Nitro Exclusive',
+    dependencies: ['@radix-ui/react-tabs', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 'framer-motion', 'lucide-react', 'clsx', 'tailwind-merge'],
+    installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/user-profile-card.json"'
+  },
   {
     id: 'chat-list-card',
     name: 'chat-list-card',
@@ -50,10 +61,8 @@ const CATALOG_COMPONENTS: ComponentItem[] = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'preview' | 'catalog' | 'code' | 'registry' | 'monetization'>('preview');
-  const [activeComponent, setActiveComponent] = useState<'chat-list-card' | 'social-post-card' | 'pricing-table'>('chat-list-card');
+  const [activeComponent, setActiveComponent] = useState<'user-profile-card' | 'chat-list-card' | 'social-post-card' | 'pricing-table'>('user-profile-card');
   const [darkMode, setDarkMode] = useState(false);
-  const [userToken] = useState('pro_sub_sk_9482710394857210');
-  const [copiedToken, setCopiedToken] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState<{ [key: string]: boolean }>({});
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -72,50 +81,31 @@ export default function App() {
     setTimeout(() => setCopiedCmd(prev => ({ ...prev, [id]: false })), 2000);
   };
 
-  const copyToken = () => {
-    navigator.clipboard.writeText(userToken);
-    setCopiedToken(true);
-    setTimeout(() => setCopiedToken(false), 2000);
-  };
+  const componentUsageCode = `import { UserProfileCard } from '@/components/blocks/user-profile-card/user-profile-card';
 
-  const componentUsageCode = `import { ChatListCard } from '@/components/blocks/chat-list-card/chat-list-card';
-
-export default function InboxPage() {
+export default function ProfilePage() {
   return (
-    <ChatListCard
-      title="Chats"
-    />
+    <UserProfileCard />
   );
 }`;
 
   const registryJson = `{
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
-  "name": "chat-list-card",
+  "name": "user-profile-card",
   "type": "registry:block",
-  "title": "Chat List Card",
-  "description": "MNC-grade chat inbox card with online indicators, search filter, unread count badges, new chat modal, and live messenger stream panel.",
-  "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
+  "title": "User Profile Card (Nitro Edition)",
+  "description": "An MNC-grade creator & user profile card with Discord Nitro features, Radix UI primitives, animated avatar decorations, and responsive metrics dashboard.",
+  "dependencies": ["@radix-ui/react-tabs", "@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu", "@radix-ui/react-tooltip", "framer-motion", "lucide-react", "clsx", "tailwind-merge"],
   "files": [
     {
-      "path": "registry/default/blocks/chat-list-card/chat-list-card.tsx",
+      "path": "registry/default/blocks/user-profile-card/user-profile-card.tsx",
       "type": "registry:component"
     },
     {
-      "path": "registry/default/blocks/chat-list-card/types.ts",
+      "path": "registry/default/blocks/user-profile-card/types.ts",
       "type": "registry:lib"
     }
   ]
-}`;
-
-  const privateRegistryConfig = `{
-  "registries": {
-    "@pro": {
-      "url": "https://api.yourdomain.com/r/{name}.json",
-      "headers": {
-        "Authorization": "Bearer \${REGISTRY_TOKEN}"
-      }
-    }
-  }
 }`;
 
   const filteredCatalog = CATALOG_COMPONENTS.filter(item => 
@@ -125,18 +115,18 @@ export default function InboxPage() {
   );
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} font-sans selection:bg-blue-500 selection:text-white transition-colors duration-300`}>
+    <div className={`min-h-screen ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} font-sans selection:bg-purple-500 selection:text-white transition-colors duration-300`}>
       {/* Top Navigation Bar */}
       <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
+            <div className="p-2 bg-purple-600/10 text-purple-600 dark:text-purple-400 rounded-xl border border-purple-500/20">
               <Server className="w-5 h-5" />
             </div>
             <div>
               <h1 className="font-bold text-sm sm:text-base leading-tight flex items-center gap-2">
                 Custom Component Manager
-                <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">v2.0 GitHub Live</span>
+                <span className="text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/20">v2.1 Nitro Added</span>
               </h1>
               <p className="text-slate-400 text-xs font-mono">Nitish2620 / shadcn-mcp-app</p>
             </div>
@@ -157,7 +147,7 @@ export default function InboxPage() {
                 onClick={() => setActiveTab('preview')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'preview'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
@@ -169,7 +159,7 @@ export default function InboxPage() {
                 onClick={() => setActiveTab('catalog')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'catalog'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
@@ -181,7 +171,7 @@ export default function InboxPage() {
                 onClick={() => setActiveTab('code')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'code'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
@@ -193,7 +183,7 @@ export default function InboxPage() {
                 onClick={() => setActiveTab('registry')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'registry'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
@@ -221,19 +211,29 @@ export default function InboxPage() {
       <main className="max-w-7xl mx-auto p-4 sm:p-8">
         {activeTab === 'preview' && (
           <div className="space-y-6">
-            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5 text-blue-900 dark:text-blue-200 font-medium">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+            <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 text-purple-900 dark:text-purple-200 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
                 <span>
-                  Official <code className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">shadcn/ui</code> Monorepo Structure. Switch component preview below:
+                  Official <code className="font-mono bg-purple-100 dark:bg-purple-900 px-1.5 py-0.5 rounded">shadcn/ui</code> Radix Primitives &amp; Nitro Features. Switch component preview below:
                 </span>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <button
+                  onClick={() => setActiveComponent('user-profile-card')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'user-profile-card' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  User Profile Card (Nitro)
+                </button>
                 <button
                   onClick={() => setActiveComponent('chat-list-card')}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
                     activeComponent === 'chat-list-card' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-purple-600 text-white' 
                       : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
                   }`}
                 >
@@ -243,7 +243,7 @@ export default function InboxPage() {
                   onClick={() => setActiveComponent('social-post-card')}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
                     activeComponent === 'social-post-card' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-purple-600 text-white' 
                       : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
                   }`}
                 >
@@ -253,7 +253,7 @@ export default function InboxPage() {
                   onClick={() => setActiveComponent('pricing-table')}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
                     activeComponent === 'pricing-table' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-purple-600 text-white' 
                       : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
                   }`}
                 >
@@ -264,7 +264,9 @@ export default function InboxPage() {
 
             {/* Live Component Render */}
             <div className="py-2">
-              {activeComponent === 'chat-list-card' ? (
+              {activeComponent === 'user-profile-card' ? (
+                <UserProfileCard />
+              ) : activeComponent === 'chat-list-card' ? (
                 <ChatListCard />
               ) : activeComponent === 'social-post-card' ? (
                 <SocialPostCard />
@@ -290,18 +292,18 @@ export default function InboxPage() {
                   placeholder="Search components..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pl-9 pr-4 py-2 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pl-9 pr-4 py-2 rounded-xl text-xs outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredCatalog.map(comp => (
-                <div key={comp.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4 hover:border-blue-500/50 transition">
+                <div key={comp.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4 hover:border-purple-500/50 transition">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-semibold bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
                           {comp.category}
                         </span>
                         {comp.badge && (
@@ -317,9 +319,9 @@ export default function InboxPage() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span className="flex items-center gap-1 font-mono text-[11px]"><Terminal className="w-3.5 h-3.5 text-blue-500" /> 1-Command CLI Install:</span>
+                      <span className="flex items-center gap-1 font-mono text-[11px]"><Terminal className="w-3.5 h-3.5 text-purple-500" /> 1-Command CLI Install:</span>
                     </div>
-                    <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-blue-300 flex items-center justify-between gap-2 overflow-hidden">
+                    <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-purple-300 flex items-center justify-between gap-2 overflow-hidden">
                       <span className="truncate">{comp.installCommand}</span>
                       <button
                         onClick={() => copyToClipboard(comp.installCommand, comp.id)}
@@ -332,9 +334,9 @@ export default function InboxPage() {
                   </div>
 
                   <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 text-xs">
-                    <div className="flex items-center gap-1 text-slate-400">
+                    <div className="flex items-center gap-1 text-slate-400 flex-wrap">
                       <span>Dependencies:</span>
-                      {comp.dependencies.map((dep, idx) => (
+                      {comp.dependencies.slice(0, 3).map((dep, idx) => (
                         <span key={idx} className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded">
                           {dep}
                         </span>
@@ -346,7 +348,7 @@ export default function InboxPage() {
                         setActiveComponent(comp.id as any);
                         setActiveTab('preview');
                       }}
-                      className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                      className="text-purple-600 dark:text-purple-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer shrink-0"
                     >
                       Live Demo <ExternalLink className="w-3 h-3" />
                     </button>
@@ -361,15 +363,15 @@ export default function InboxPage() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold">Usage in React</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Import and use <code className="font-mono text-blue-600">ChatListCard</code> anywhere in your app</p>
+                <h2 className="text-lg font-bold">Usage in Next.js / React</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Import and use <code className="font-mono text-purple-600">UserProfileCard</code> anywhere in your app</p>
               </div>
               <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                registry/default/blocks/chat-list-card/chat-list-card.tsx
+                registry/default/blocks/user-profile-card/user-profile-card.tsx
               </span>
             </div>
             
-            <pre className="p-5 rounded-2xl bg-slate-950 font-mono text-xs text-blue-300 overflow-x-auto border border-slate-800">
+            <pre className="p-5 rounded-2xl bg-slate-950 font-mono text-xs text-purple-300 overflow-x-auto border border-slate-800">
               {componentUsageCode}
             </pre>
           </div>
@@ -379,11 +381,11 @@ export default function InboxPage() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
             <div>
               <h2 className="text-lg font-bold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-600" />
+                <Sparkles className="w-5 h-5 text-purple-600" />
                 shadcn MCP Server Registry Definition
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                This component is ready to be distributed to AI clients via the configured MCP server using <code className="font-mono text-blue-600">components.json</code>!
+                This component is ready to be distributed to AI clients via the configured MCP server using <code className="font-mono text-purple-600">components.json</code>!
               </p>
             </div>
 
@@ -395,122 +397,15 @@ export default function InboxPage() {
 
         {activeTab === 'monetization' && (
           <div className="space-y-8">
-            {/* Subscription Architecture Header */}
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-8 border border-indigo-500/30 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                <ShieldCheck className="w-72 h-72 text-indigo-400" />
-              </div>
+            <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white rounded-3xl p-8 border border-purple-500/30 shadow-2xl relative overflow-hidden">
               <div className="max-w-2xl space-y-3 relative z-10">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                   <Zap className="w-3.5 h-3.5" /> Commercial Monetization Guide
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">How to Charge Subscriptions for Your Components</h2>
                 <p className="text-slate-300 text-sm leading-relaxed">
-                  You can sell access to your custom components using <strong>Private Authenticated Registries</strong> with Stripe or LemonSqueezy, or adopt a <strong>Freemium model</strong>.
+                  Sell access to your custom components using <strong>Private Authenticated Registries</strong> with Stripe or LemonSqueezy.
                 </p>
-              </div>
-            </div>
-
-            {/* Pricing Tiers Comparison */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Free Tier Card */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-7 space-y-6 shadow-sm">
-                <div>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    Free / Open Tier
-                  </span>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-3">$0 <span className="text-xs text-slate-400 font-normal">/ forever</span></h3>
-                  <p className="text-slate-500 text-xs mt-1">Provide free components to build audience, traffic &amp; developer trust.</p>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
-                  {[
-                    'Public JSON Registry endpoint',
-                    'Direct 1-command install via npx shadcn',
-                    'Increases social media & GitHub exposure',
-                    'Convert free users to paid Pro subscribers'
-                  ].map((feat, idx) => (
-                    <li key={idx} className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-800 text-xs font-mono text-slate-600 dark:text-slate-400">
-                  npx shadcn@latest add "https://yourdomain.com/r/free-component.json"
-                </div>
-              </div>
-
-              {/* Pro Subscription Tier Card */}
-              <div className="bg-white dark:bg-slate-900 border-2 border-indigo-500 rounded-3xl p-7 space-y-6 shadow-xl relative">
-                <div className="absolute top-4 right-4 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full">
-                  MOST POPULAR
-                </div>
-
-                <div>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                    Pro Subscription Tier
-                  </span>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-3">$19 <span className="text-xs text-slate-400 font-normal">/ month (or $199 lifetime)</span></h3>
-                  <p className="text-slate-500 text-xs mt-1">Charge recurring subscriptions for full access to Pro components.</p>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
-                  {[
-                    'Private Authenticated Registry (Bearer token protected)',
-                    'Automatic API key generation on Stripe/LemonSqueezy checkout',
-                    'Shadcn CLI & AI Assistant (Claude, Cursor) authentication',
-                    'Full source code access for active subscribers'
-                  ].map((feat, idx) => (
-                    <li key={idx} className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-indigo-500 shrink-0" />
-                      <span className="font-medium">{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Simulated Token Generator */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span className="flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400">
-                      <Key className="w-3.5 h-3.5" /> Subscriber API Secret Key:
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs text-amber-400 flex items-center justify-between">
-                    <span className="truncate">{userToken}</span>
-                    <button
-                      onClick={copyToken}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] transition shrink-0 ml-2 cursor-pointer"
-                    >
-                      {copiedToken ? 'Copied!' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* How Paid Subscriber Configuration Works */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
-              <div>
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-indigo-500" />
-                  How Subscribers Authenticate in <code className="text-indigo-600 font-mono">components.json</code>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  When a paid customer subscribes, they set their <code className="font-mono text-amber-500">REGISTRY_TOKEN</code> in <code className="font-mono text-slate-600">.env.local</code> and configure their private registry in <code className="font-mono text-slate-600">components.json</code>:
-                </p>
-              </div>
-
-              <pre className="p-5 rounded-2xl bg-slate-950 font-mono text-xs text-amber-400 overflow-x-auto border border-slate-800">
-                {privateRegistryConfig}
-              </pre>
-
-              <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200/60 dark:border-indigo-900/60 flex items-start gap-3 text-xs text-indigo-900 dark:text-indigo-200">
-                <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong>Backend Flow:</strong> When the subscriber runs <code className="font-mono font-bold">npx shadcn@latest add @pro/social-post-card</code>, your backend verifies the <code className="font-mono">Authorization: Bearer</code> header. If their subscription is active in Stripe, your server returns the component source code!
-                </div>
               </div>
             </div>
           </div>
