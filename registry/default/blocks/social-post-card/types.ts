@@ -35,6 +35,7 @@ export interface Comment {
 }
 
 export interface SocialPostProps {
+  id?: string;
   author?: {
     name: string;
     avatar: string;
@@ -50,4 +51,9 @@ export interface SocialPostProps {
   initialSharesCount?: number;
   initialViews?: number;
   initialComments?: Comment[];
+  isSaved?: boolean;
+  sentiment?: {
+    label: string;
+    score: number;
+  };
 }
