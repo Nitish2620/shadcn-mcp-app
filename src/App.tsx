@@ -1,12 +1,38 @@
 import { useState } from 'react';
 import { SocialPostCard } from './components/SocialPostCard';
-import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, ShieldCheck, Key, Lock, Zap, Check } from 'lucide-react';
+import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, ShieldCheck, Key, Lock, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid, FolderGit2 } from 'lucide-react';
+
+interface ComponentItem {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  category: string;
+  badge?: string;
+  dependencies: string[];
+  installCommand: string;
+}
+
+const CATALOG_COMPONENTS: ComponentItem[] = [
+  {
+    id: 'social-post-card',
+    name: 'social-post-card',
+    title: 'Social Post Card',
+    description: 'MNC-grade feed card with multi-reactions, right-side comments panel, audio voice note player, and fullscreen lightbox.',
+    category: 'Social & Feed',
+    badge: 'Pro Featured',
+    dependencies: ['lucide-react', 'clsx', 'tailwind-merge'],
+    installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/social-post-card.json"'
+  }
+];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'preview' | 'code' | 'registry' | 'monetization'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'catalog' | 'code' | 'registry' | 'monetization'>('preview');
   const [darkMode, setDarkMode] = useState(false);
   const [userToken] = useState('pro_sub_sk_9482710394857210');
   const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedCmd, setCopiedCmd] = useState<{ [key: string]: boolean }>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -15,6 +41,12 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCmd(prev => ({ ...prev, [id]: true }));
+    setTimeout(() => setCopiedCmd(prev => ({ ...prev, [id]: false })), 2000);
   };
 
   const copyToken = () => {
@@ -78,21 +110,27 @@ export default function FeedPage() {
   }
 }`;
 
+  const filteredCatalog = CATALOG_COMPONENTS.filter(item => 
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className={`min-h-screen ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} font-sans selection:bg-blue-500 selection:text-white transition-colors duration-300`}>
       {/* Top Navigation Bar */}
       <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20">
               <Server className="w-5 h-5" />
             </div>
             <div>
               <h1 className="font-bold text-sm sm:text-base leading-tight flex items-center gap-2">
-                Custom Social Post Component 
-                <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">v2.0 Enhanced</span>
+                Custom Component Manager
+                <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">v2.0 GitHub Live</span>
               </h1>
-              <p className="text-slate-400 text-xs font-mono">shadcn-mcp-app / src/components/SocialPostCard.tsx</p>
+              <p className="text-slate-400 text-xs font-mono">Nitish2620 / shadcn-mcp-app</p>
             </div>
           </div>
 
@@ -118,6 +156,19 @@ export default function FeedPage() {
                 <Eye className="w-3.5 h-3.5" />
                 Live Preview
               </button>
+
+              <button
+                onClick={() => setActiveTab('catalog')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  activeTab === 'catalog'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Grid className="w-3.5 h-3.5" />
+                Catalog ({CATALOG_COMPONENTS.length})
+              </button>
+
               <button
                 onClick={() => setActiveTab('code')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
@@ -129,6 +180,7 @@ export default function FeedPage() {
                 <Code2 className="w-3.5 h-3.5" />
                 Code
               </button>
+
               <button
                 onClick={() => setActiveTab('registry')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
@@ -140,6 +192,7 @@ export default function FeedPage() {
                 <Layers className="w-3.5 h-3.5" />
                 MCP Registry
               </button>
+
               <button
                 onClick={() => setActiveTab('monetization')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
@@ -149,7 +202,7 @@ export default function FeedPage() {
                 }`}
               >
                 <Zap className="w-3.5 h-3.5" />
-                Subscriptions &amp; Sales
+                Subscriptions
               </button>
             </div>
           </div>
@@ -157,26 +210,105 @@ export default function FeedPage() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-6xl mx-auto p-4 sm:p-8">
+      <main className="max-w-7xl mx-auto p-4 sm:p-8">
         {activeTab === 'preview' && (
           <div className="space-y-6">
             <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5 text-blue-900 dark:text-blue-200 font-medium">
                 <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
-                  Component rendered live from <code className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">SocialPostCard.tsx</code>. Supports both Free and Paid Subscription distribution models!
+                  Component rendered live from <code className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">SocialPostCard.tsx</code>. Published to GitHub at <a href="https://github.com/Nitish2620/shadcn-mcp-app" target="_blank" rel="noreferrer" className="underline font-semibold">Nitish2620/shadcn-mcp-app</a>!
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-900 text-blue-600 font-semibold border border-blue-200 dark:border-blue-800">
-                  Ready for Review
-                </span>
+                <a href="https://github.com/Nitish2620/shadcn-mcp-app" target="_blank" rel="noreferrer" className="px-3 py-1 rounded-full bg-slate-900 text-white font-semibold flex items-center gap-1">
+                  <FolderGit2 className="w-3.5 h-3.5" /> GitHub Repo
+                </a>
               </div>
             </div>
 
             {/* Live Component Render */}
             <div className="py-2">
               <SocialPostCard />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'catalog' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Component Catalog &amp; Manager</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Manage, preview, and copy installation commands for all your custom components</p>
+              </div>
+
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search components..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pl-9 pr-4 py-2 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredCatalog.map(comp => (
+                <div key={comp.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4 hover:border-blue-500/50 transition">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                          {comp.category}
+                        </span>
+                        {comp.badge && (
+                          <span className="text-[10px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                            {comp.badge}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1.5">{comp.title}</h3>
+                      <p className="text-xs text-slate-500 leading-relaxed mt-1">{comp.description}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span className="flex items-center gap-1 font-mono text-[11px]"><Terminal className="w-3.5 h-3.5 text-blue-500" /> 1-Command CLI Install:</span>
+                    </div>
+                    <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-blue-300 flex items-center justify-between gap-2 overflow-hidden">
+                      <span className="truncate">{comp.installCommand}</span>
+                      <button
+                        onClick={() => copyToClipboard(comp.installCommand, comp.id)}
+                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        {copiedCmd[comp.id] ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedCmd[comp.id] ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <span>Dependencies:</span>
+                      {comp.dependencies.map((dep, idx) => (
+                        <span key={idx} className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded">
+                          {dep}
+                        </span>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setActiveTab('preview')}
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      Live Demo <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

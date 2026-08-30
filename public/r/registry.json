@@ -1,0 +1,11 @@
+[
+  {
+    "name": "social-post-card",
+    "type": "registry:component",
+    "title": "Social Post Card",
+    "description": "MNC-grade social media post card with reaction popover, right-side comments panel, audio voice notes player, and lightbox.",
+    "category": "Social & Feed",
+    "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
+    "files": ["src/components/SocialPostCard.tsx", "src/components/types.ts"]
+  }
+]
