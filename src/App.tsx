@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SocialPostCard } from './components/SocialPostCard';
+import { SocialPostCard } from './components/social/SocialPostCard';
 import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, ShieldCheck, Key, Lock, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid, FolderGit2 } from 'lucide-react';
 
 interface ComponentItem {

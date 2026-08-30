@@ -1,32 +1,76 @@
-# React + TypeScript + Vite
+# 🎨 Custom Component Registry & MCP Server
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+> A production-grade, MNC-standard custom React component library and registry powered by **Vite**, **TypeScript**, **Tailwind CSS v4**, and the **shadcn MCP Server**.
 
-Currently, two official plugins are available:
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![shadcn/ui](https://img.shields.io/badge/shadcn-compatible-black.svg)](https://ui.shadcn.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 📁 Organized Repository Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+shadcn-mcp-app/
+├── public/
+│   └── r/                             <-- REGISTRY SPECIFICATION FILES
+│       ├── registry.json              <-- Master list of all components
+│       └── social-post-card.json       <-- 1-Command CLI installer spec
+│
+├── src/
+│   └── components/                    <-- SOURCE CODE ORGANIZED BY CATEGORY
+│       └── social/                    <-- Category: Social & Feed
+│           ├── SocialPostCard.tsx
+│           └── types.ts
+│
+├── components.json                    <-- shadcn MCP Registry Config
+├── README.md                          <-- Project Documentation
+└── package.json
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🧩 Component Catalog
+
+| Component | Category | Description | 1-Command Installation |
+| :--- | :---: | :--- | :--- |
+| **Social Post Card** | `Social & Feed` | MNC-grade feed card with multi-reaction bar, right-side discussion panel, audio voice note player, and lightbox. | `npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/social-post-card.json"` |
+
+---
+
+## 🚀 How Developers Can Use This Registry
+
+### Option 1: 1-Command CLI Install (Recommended)
+
+Run this command inside any React / Next.js / Vite project:
+
+```bash
+npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/social-post-card.json"
+```
+
+### Option 2: AI Assistant Prompt (Claude Code, Cursor, VS Code)
+
+If your project is configured with `components.json`, simply ask your AI assistant:
+
+> *"Add the social-post-card component from Nitish2620 registry to my project"*
+
+---
+
+## 📁 How to Add New Components Cleanly
+
+When adding a new component to this repository:
+
+1. Create a category subfolder: `src/components/<category>/<ComponentName>.tsx`
+2. Create its registry JSON: `public/r/<component-name>.json`
+3. Commit and push:
+   ```bash
+   git add .
+   git commit -m "feat: add <component-name> component"
+   git push origin main
+   ```
+
+---
+
+## 📄 License
+[MIT](LICENSE) © Nitish Yadav

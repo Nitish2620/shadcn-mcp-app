@@ -7,14 +7,14 @@
   "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
   "files": [
     {
-      "path": "src/components/SocialPostCard.tsx",
+      "path": "src/components/social/SocialPostCard.tsx",
       "type": "registry:component",
-      "target": "components/SocialPostCard.tsx"
+      "target": "components/social/SocialPostCard.tsx"
     },
     {
-      "path": "src/components/types.ts",
+      "path": "src/components/social/types.ts",
       "type": "registry:lib",
-      "target": "components/types.ts"
+      "target": "components/social/types.ts"
     }
   ]
 }
