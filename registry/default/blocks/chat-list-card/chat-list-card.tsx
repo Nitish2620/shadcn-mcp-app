@@ -25,6 +25,7 @@ import type { ChatItem, ChatListCardProps, Message } from './types';
 export type { ChatItem, ChatListCardProps, Message };
 
 const ITEM_HEIGHT = 64; // Height of each chat row in px
+const MSG_HEIGHT = 72; // Estimated height of each message bubble in px
 
 const INITIAL_CHATS: ChatItem[] = [
   {
@@ -284,6 +285,11 @@ export function ChatListCard({
   const [scrollTop, setScrollTop] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Virtual Windowing State for Messages Stream (Right Panel)
+  const [msgScrollTop, setMsgScrollTop] = useState(0);
+  const msgScrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isMsgStressLoaded, setIsMsgStressLoaded] = useState(false);
+
   // Context Menu State
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -381,6 +387,80 @@ export function ChatListCard({
     chatList.find(c => c.id === selectedChatId) || chatList[0],
   [chatList, selectedChatId]);
 
+  // 100,000 MESSAGES INJECTION INTO SELECTED CHAT (RIGHT PANEL STRESS TEST)
+  const handleInject100kMessages = useCallback(() => {
+    if (!selectedChat) return;
+
+    if (isMsgStressLoaded) {
+      // Reset to original messages
+      setChatList(prev => prev.map(c => {
+        if (c.id === selectedChat.id) {
+          return { ...c, messages: c.messages.slice(0, 3), lastMessage: c.messages[0]?.text || '' };
+        }
+        return c;
+      }));
+      setIsMsgStressLoaded(false);
+      setMsgScrollTop(0);
+      showToast('Reset messages to original 🔄');
+      return;
+    }
+
+    const sampleTexts = [
+      'Hey, how are you doing today?',
+      'Just finished the code review — looks great!',
+      'Can you check the latest deployment?',
+      'The meeting has been moved to 3 PM.',
+      'I pushed the hotfix, please verify.',
+      'Great work on the new feature! 🚀',
+      'Let me know when you are free to sync.',
+      'The client approved the final design.',
+      'Running the stress test now — 60 FPS!',
+      'Happy to help anytime. 👍',
+      'Did you see the latest analytics report?',
+      'Infrastructure migration is 100% complete.',
+      'PR merged successfully — zero conflicts.',
+      'The API response time improved by 40%.',
+      'New release candidate is ready for QA.',
+      'Thanks for the quick turnaround!',
+      'Bug confirmed — working on a fix now.',
+      'Staging environment is up and running.',
+      'Can we schedule a 1:1 tomorrow?',
+      'Everything looks solid on production. ✅'
+    ];
+
+    const stressMessages: Message[] = [];
+    for (let i = 0; i < 100000; i++) {
+      const isMe = i % 3 === 0;
+      const hours = Math.floor(i / 60);
+      const mins = i % 60;
+      stressMessages.push({
+        id: `stress_msg_${i}`,
+        senderId: isMe ? 'me' : selectedChat.id,
+        senderName: isMe ? 'You' : selectedChat.name,
+        text: sampleTexts[i % sampleTexts.length],
+        timestamp: `${hours}:${mins.toString().padStart(2, '0')}`,
+        isMe,
+        status: isMe ? 'read' : undefined
+      });
+    }
+
+    setChatList(prev => prev.map(c => {
+      if (c.id === selectedChat.id) {
+        return { ...c, messages: stressMessages, lastMessage: stressMessages[stressMessages.length - 1].text };
+      }
+      return c;
+    }));
+    setIsMsgStressLoaded(true);
+    showToast('Injected 100,000 messages — virtual windowing active! 🚀');
+
+    // Scroll to bottom after injection
+    setTimeout(() => {
+      if (msgScrollContainerRef.current) {
+        msgScrollContainerRef.current.scrollTop = msgScrollContainerRef.current.scrollHeight;
+      }
+    }, 50);
+  }, [selectedChat, isMsgStressLoaded, showToast]);
+
   const filteredChats = useMemo(() => {
     const query = debouncedQuery.toLowerCase().trim();
     return chatList.filter(c => {
@@ -394,7 +474,7 @@ export function ChatListCard({
   }, [chatList, debouncedQuery, filterTab]);
 
   /* ========================================================
-     VIRTUALIZED WINDOWING CALCULATIONS (SLICING REGION)
+     VIRTUALIZED WINDOWING — CHAT LIST (LEFT PANEL)
   ======================================================== */
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
@@ -420,6 +500,35 @@ export function ChatListCard({
 
     return { items, paddingTop, paddingBottom };
   }, [filteredChats, scrollTop]);
+
+  /* ========================================================
+     VIRTUALIZED WINDOWING — MESSAGES STREAM (RIGHT PANEL)
+  ======================================================== */
+  const handleMsgScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setMsgScrollTop(e.currentTarget.scrollTop);
+  };
+
+  const msgVirtualSlice = useMemo(() => {
+    const msgs = selectedChat?.messages || [];
+    const totalCount = msgs.length;
+    if (totalCount <= 30) {
+      return {
+        items: msgs,
+        paddingTop: 0,
+        paddingBottom: 0
+      };
+    }
+
+    const containerHeight = 350;
+    const startIndex = Math.max(0, Math.floor(msgScrollTop / MSG_HEIGHT) - 5);
+    const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / MSG_HEIGHT) + 10);
+
+    const items = msgs.slice(startIndex, endIndex);
+    const paddingTop = startIndex * MSG_HEIGHT;
+    const paddingBottom = (totalCount - endIndex) * MSG_HEIGHT;
+
+    return { items, paddingTop, paddingBottom };
+  }, [selectedChat?.messages, msgScrollTop]);
 
   const handleSendMessage = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -653,6 +762,20 @@ export function ChatListCard({
                 </div>
 
                 <div className="flex items-center gap-1 text-slate-400" ref={contextMenuRef}>
+                  {/* 100k MESSAGES STRESS TEST BUTTON */}
+                  <button
+                    type="button"
+                    onClick={handleInject100kMessages}
+                    aria-label="Inject 100k messages stress test"
+                    title="Inject 100,000 messages to stress test the message stream"
+                    className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                      isMsgStressLoaded
+                        ? 'bg-amber-500 text-white animate-pulse'
+                        : 'bg-violet-50 dark:bg-violet-950/80 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800'
+                    }`}
+                  >
+                    <Zap className="w-3 h-3" /> {isMsgStressLoaded ? `100k Msgs` : '100k Msgs'}
+                  </button>
                   <button type="button" aria-label="Call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Phone className="w-4 h-4" /></button>
                   <button type="button" aria-label="Video call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Video className="w-4 h-4" /></button>
 
@@ -711,11 +834,24 @@ export function ChatListCard({
                 </div>
               </div>
 
-              {/* Messages Stream */}
-              <div role="log" aria-live="polite" className="flex-1 overflow-y-auto py-4 space-y-3 max-h-[350px] pr-1">
-                {selectedChat.messages.map(msg => (
-                  <MessageBubble key={msg.id} msg={msg} />
-                ))}
+              {/* Messages Stream (VIRTUALIZED) */}
+              <div
+                ref={msgScrollContainerRef}
+                onScroll={handleMsgScroll}
+                role="log"
+                aria-live="polite"
+                className="flex-1 overflow-y-auto py-4 max-h-[350px] pr-1"
+              >
+                {isMsgStressLoaded && (
+                  <div className="text-center text-[10px] text-violet-500 font-bold mb-2 animate-pulse">
+                    ⚡ {selectedChat.messages.length.toLocaleString()} messages loaded — Virtual Windowing Active (60 FPS)
+                  </div>
+                )}
+                <div style={{ paddingTop: `${msgVirtualSlice.paddingTop}px`, paddingBottom: `${msgVirtualSlice.paddingBottom}px` }} className="space-y-3">
+                  {msgVirtualSlice.items.map(msg => (
+                    <MessageBubble key={msg.id} msg={msg} />
+                  ))}
+                </div>
                 <div ref={messagesEndRef} />
               </div>
 
