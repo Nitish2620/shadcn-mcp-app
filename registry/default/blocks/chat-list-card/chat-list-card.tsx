@@ -5,7 +5,7 @@ import {
   Send, 
   Phone, 
   Video, 
-  MoreVertical, 
+  MoreHorizontal, 
   Pin, 
   CheckCheck, 
   X, 
@@ -13,7 +13,11 @@ import {
   Paperclip, 
   Sparkles,
   Volume2,
-  VolumeX
+  VolumeX,
+  User,
+  Share2,
+  Ban,
+  Trash2
 } from 'lucide-react';
 import type { ChatItem, ChatListCardProps, Message } from './types';
 
@@ -176,7 +180,7 @@ const MessageBubble = React.memo(({ msg }: { msg: Message }) => {
 MessageBubble.displayName = 'MessageBubble';
 
 /* ========================================================
-   MAIN CHAT LIST CARD COMPONENT (HIGH TRAFFIC OPTIMIZED)
+   MAIN CHAT LIST CARD COMPONENT (WITH THREE DOTS CONTEXT MENU)
 ======================================================== */
 export function ChatListCard({
   title = "Chats",
@@ -192,7 +196,24 @@ export function ChatListCard({
   const [newChatName, setNewChatName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // Context Menu State
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setShowContextMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Debounced search for high traffic stream filtering
   useEffect(() => {
@@ -204,6 +225,11 @@ export function ChatListCard({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedChatId, chatList]);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  }, []);
 
   // Audio Haptic Feedback Synthesizer
   const playSoundEffect = useCallback((type: 'send' | 'select' = 'send') => {
@@ -274,6 +300,7 @@ export function ChatListCard({
   const handleSelectChat = useCallback((id: string) => {
     playSoundEffect('select');
     setSelectedChatId(id);
+    setShowContextMenu(false);
     setChatList(prev => prev.map(c => c.id === id ? { ...c, unreadCount: 0 } : c));
   }, [playSoundEffect]);
 
@@ -302,8 +329,44 @@ export function ChatListCard({
     setShowNewChatModal(false);
   }, [newChatName, playSoundEffect]);
 
+  /* Context Menu Handlers (View Profile, Share, Block, Delete) */
+  const handleViewProfile = () => {
+    setShowContextMenu(false);
+    setShowProfileModal(true);
+  };
+
+  const handleShareChat = () => {
+    setShowContextMenu(false);
+    navigator.clipboard.writeText(`https://chat.example.com/c/${selectedChat?.id}`);
+    showToast('Chat link copied to clipboard 🔗');
+  };
+
+  const handleBlockUser = () => {
+    setShowContextMenu(false);
+    showToast(`Blocked ${selectedChat?.name} 🚫`);
+  };
+
+  const handleDeleteChat = () => {
+    setShowContextMenu(false);
+    if (!selectedChat) return;
+    setChatList(prev => prev.filter(c => c.id !== selectedChat.id));
+    showToast(`Deleted chat with ${selectedChat.name} 🗑️`);
+    if (chatList.length > 1) {
+      const remaining = chatList.filter(c => c.id !== selectedChat.id);
+      setSelectedChatId(remaining[0]?.id || null);
+    }
+  };
+
   return (
-    <div className="w-full max-w-5xl mx-auto font-sans">
+    <div className="w-full max-w-5xl mx-auto font-sans relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div role="status" className="fixed top-5 right-5 z-50 bg-slate-900/95 dark:bg-slate-100/95 text-white dark:text-slate-900 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2 animate-in fade-in backdrop-blur-md">
+          <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
+          {toastMessage}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Side: Chats List Card (Matches Screenshot Design) */}
@@ -389,12 +452,12 @@ export function ChatListCard({
           </div>
         </div>
 
-        {/* Right Side: Active Messenger Thread (MNC Grade Polish) */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between min-h-[500px]">
+        {/* Right Side: Active Messenger Thread with 3 Dots Menu */}
+        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between min-h-[500px] relative">
           {selectedChat ? (
             <>
-              {/* Header Bar */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              {/* Header Bar with Three Dots Menu */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 relative">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <img src={selectedChat.avatar} alt={selectedChat.name} loading="lazy" decoding="async" className="w-10 h-10 rounded-full object-cover" />
@@ -406,10 +469,62 @@ export function ChatListCard({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-slate-400">
+                <div className="flex items-center gap-1 text-slate-400" ref={contextMenuRef}>
                   <button type="button" aria-label="Call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Phone className="w-4 h-4" /></button>
                   <button type="button" aria-label="Video call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Video className="w-4 h-4" /></button>
-                  <button type="button" aria-label="More options" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><MoreVertical className="w-4 h-4" /></button>
+
+                  {/* THREE DOTS BUTTON (Matches User Screenshot) */}
+                  <button 
+                    type="button" 
+                    onClick={() => setShowContextMenu(!showContextMenu)}
+                    aria-label="More options" 
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition cursor-pointer"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+
+                  {/* CONTEXT MENU POPOVER (Matches Screenshot Exact Design) */}
+                  {showContextMenu && (
+                    <div className="absolute top-12 right-0 z-50 w-48 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                      <button
+                        type="button"
+                        onClick={handleViewProfile}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <User className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>View Profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleShareChat}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Share2 className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>Share</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleBlockUser}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Ban className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span>Block</span>
+                      </button>
+
+                      <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                      <button
+                        type="button"
+                        onClick={handleDeleteChat}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -445,6 +560,26 @@ export function ChatListCard({
         </div>
 
       </div>
+
+      {/* User Profile Modal */}
+      {showProfileModal && selectedChat && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
+            <div className="flex justify-end">
+              <button type="button" onClick={() => setShowProfileModal(false)} className="cursor-pointer"><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <img src={selectedChat.avatar} alt={selectedChat.name} className="w-20 h-20 rounded-full object-cover mx-auto ring-4 ring-blue-500/20" />
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedChat.name}</h3>
+              <p className="text-xs text-emerald-600 font-medium mt-0.5">{selectedChat.statusText || 'Active now'}</p>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Software Engineer • Product Design • San Francisco, CA</p>
+            <div className="pt-2 flex items-center justify-center gap-2">
+              <button type="button" onClick={() => setShowProfileModal(false)} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Message</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Chat Modal */}
       {showNewChatModal && (
