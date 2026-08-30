@@ -1097,10 +1097,15 @@ export function UserProfileCard({
                               { id: 'retrowave_sunset', label: 'Retro Sunset', emoji: '🌅' },
                               { id: 'magic_spells', label: 'Magic Spells', emoji: '🔮' },
                               { id: 'cosmic_void', label: 'Cosmic Void', emoji: '🌌' },
-                              { id: 'cyber_matrix_stream', label: 'Matrix Stream', emoji: '💻' }
+                              { id: 'cyber_matrix_stream', label: 'Matrix Stream', emoji: '💻' },
+                              { id: 'autumn_leaves', label: 'Autumn Leaves', emoji: '🍂' },
+                              { id: 'neon_glitch', label: 'Neon Glitch', emoji: '⚡' },
+                              { id: 'dragon_fire', label: 'Dragon Fire', emoji: '🔥' },
+                              { id: 'sakura_breeze', label: 'Sakura Breeze', emoji: '🌸' },
+                              { id: 'lightning_surge', label: 'Lightning Surge', emoji: '⚡' }
                             ].map((item) => (
                               <button
-                                key={item.id}
+                                key={`peffect-opt-${item.id}`}
                                 type="button"
                                 onClick={() => {
                                   if (!isNitroPro && item.id !== 'none') {
@@ -1138,10 +1143,17 @@ export function UserProfileCard({
                               { id: 'phoenix_flame', label: 'Phoenix Flame', emoji: '🔥' },
                               { id: 'solar_flare', label: 'Solar Flare', emoji: '☀️' },
                               { id: 'galaxy_warp', label: 'Galaxy Warp', emoji: '🔮' },
-                              { id: 'crown', label: 'Gold Crown', emoji: '👑' }
+                              { id: 'crown', label: 'Gold Crown', emoji: '👑' },
+                              { id: 'neon', label: 'Cyber Neon', emoji: '⚡' },
+                              { id: 'diamond', label: 'Diamond Aura', emoji: '💎' },
+                              { id: 'sakura', label: 'Sakura Petals', emoji: '🌸' },
+                              { id: 'matrix', label: 'Matrix Code', emoji: '💻' },
+                              { id: 'holographic_glitch', label: 'Holo Glitch', emoji: '⚡' },
+                              { id: 'flame', label: 'Flame Ring', emoji: '🔥' },
+                              { id: 'sparkle', label: 'Sparkles', emoji: '✨' }
                             ].map((item) => (
                               <button
-                                key={item.id}
+                                key={`dec-opt-${item.id}`}
                                 type="button"
                                 onClick={() => {
                                   if (!isNitroPro && item.id !== 'none') {
@@ -1175,10 +1187,15 @@ export function UserProfileCard({
                               { id: 'none', label: 'None', emoji: '🚫' },
                               { id: 'retrowave_grid', label: 'Synthwave Grid', emoji: '🌐' },
                               { id: 'hyperdrive_stars', label: 'Hyperdrive Stars', emoji: '✨' },
-                              { id: 'frostbite', label: 'Frostbite Blizzard', emoji: '❄️' }
+                              { id: 'frostbite', label: 'Frostbite Blizzard', emoji: '❄️' },
+                              { id: 'lightning', label: 'Lightning Storm', emoji: '⚡' },
+                              { id: 'gold_dust', label: 'Gold Dust', emoji: '✨' },
+                              { id: 'matrix', label: 'Matrix Grid', emoji: '💻' },
+                              { id: 'nebula', label: 'Deep Nebula', emoji: '🌌' },
+                              { id: 'sakura', label: 'Sakura Falling', emoji: '🌸' }
                             ].map((item) => (
                               <button
-                                key={item.id}
+                                key={`banner-opt-${item.id}`}
                                 type="button"
                                 onClick={() => {
                                   if (!isNitroPro && item.id !== 'none') {
@@ -1198,6 +1215,23 @@ export function UserProfileCard({
                                 <span>{item.label}</span>
                               </button>
                             ))}
+                          </div>
+                        </div>
+
+                        {/* LIVE MINI-PREVIEW BOX IN MODAL */}
+                        <div className="p-3 bg-slate-900 rounded-2xl border border-slate-700/80 flex items-center gap-4">
+                          <div className="relative w-16 h-16 rounded-full bg-slate-800 shrink-0">
+                            <AvatarDecorationFrame decoration={editDecoration} isUnlocked={true} />
+                            <img src={profile.avatar} alt="Live Mini Preview" className="w-full h-full rounded-full object-cover relative z-10" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                              <span>Live Preview</span>
+                              <span className="text-[9px] bg-purple-600 text-white px-2 py-0.2 rounded-full">Realtime</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">
+                              Decoration: <span className="text-purple-400 font-bold">{editDecoration}</span> • Banner: <span className="text-pink-400 font-bold">{editBannerEffect}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
