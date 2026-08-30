@@ -1730,7 +1730,7 @@ export function UserProfileCard({
                   const isSelected = subscriptionTier === plan.id;
                   return (
                     <div 
-                      key={plan.id}
+                      key={`modal-plan-${plan.id}`}
                       className={`p-4 rounded-2xl border flex items-center justify-between transition cursor-pointer ${
                         isSelected 
                           ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/50' 
