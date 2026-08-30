@@ -187,33 +187,72 @@ MessageBubble.displayName = 'MessageBubble';
 /* ========================================================
    MAIN CHAT LIST CARD COMPONENT (WITH VIRTUALIZED WINDOWING)
 ======================================================== */
-const STRESS_TEST_KEY = '__stress_test_chats';
+/* ========================================================
+   IndexedDB PERSISTENCE LAYER (Supports 100k+ Records)
+   localStorage caps at ~5MB. IndexedDB handles 100s of MB.
+======================================================== */
+const IDB_NAME = 'ChatStressTestDB';
+const IDB_STORE = 'chats';
+const IDB_VERSION = 1;
+
+function openStressDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbSaveChats(chats: ChatItem[]): Promise<void> {
+  return openStressDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(chats, 'data');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  });
+}
+
+function idbLoadChats(): Promise<ChatItem[] | null> {
+  return openStressDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get('data');
+      req.onsuccess = () => {
+        db.close();
+        const val = req.result;
+        if (Array.isArray(val) && val.length > 0) resolve(val);
+        else resolve(null);
+      };
+      req.onerror = () => { db.close(); reject(req.error); };
+    });
+  });
+}
+
+function idbClearChats(): Promise<void> {
+  return openStressDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete('data');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  });
+}
 
 export function ChatListCard({
   title = "Chats",
   chats = INITIAL_CHATS
 }: ChatListCardProps) {
-  // Lazy initializer: read from localStorage ONCE on mount (survives refresh)
-  const [chatList, setChatList] = useState<ChatItem[]>(() => {
-    try {
-      const stored = localStorage.getItem(STRESS_TEST_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as ChatItem[];
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return chats;
-  });
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(() => {
-    try {
-      const stored = localStorage.getItem(STRESS_TEST_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].id;
-      }
-    } catch {}
-    return '1';
-  });
+  const [chatList, setChatList] = useState<ChatItem[]>(chats);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>('1');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'pinned'>('all');
@@ -221,16 +260,25 @@ export function ChatListCard({
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatName, setNewChatName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [is10kLoaded, setIs10kLoaded] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STRESS_TEST_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) && parsed.length > 100;
-      }
-    } catch {}
-    return false;
-  });
+  const [is10kLoaded, setIs10kLoaded] = useState(false);
+  const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
+
+  // Load persisted stress-test data from IndexedDB on mount
+  useEffect(() => {
+    let cancelled = false;
+    idbLoadChats()
+      .then(stored => {
+        if (cancelled) return;
+        if (stored) {
+          setChatList(stored);
+          setSelectedChatId(stored[0]?.id || '1');
+          setIs10kLoaded(true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setIsLoadingFromDB(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Virtual Windowing State for 10,000+ Items (Zero Browser Freeze)
   const [scrollTop, setScrollTop] = useState(0);
@@ -289,11 +337,12 @@ export function ChatListCard({
     } catch {}
   }, [soundEnabled]);
 
-  // 10,000 ROW STRESS TEST MOCK DATA GENERATOR
+  // 10,000 ROW STRESS TEST GENERATOR — persists to IndexedDB
   const handleInject10kData = useCallback(() => {
     if (is10kLoaded) {
-      localStorage.removeItem(STRESS_TEST_KEY);
+      idbClearChats().catch(() => {});
       setChatList(INITIAL_CHATS);
+      setSelectedChatId('1');
       setIs10kLoaded(false);
       showToast('Reset to 5 initial chats (cache cleared) 🔄');
       return;
@@ -310,19 +359,22 @@ export function ChatListCard({
         id: `10k_${i}`,
         name: `${fn} ${ln} #${i}`,
         avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-        lastMessage: `Stress test message #${i}: Virtual windowing renders only 10 items at 60 FPS!`,
+        lastMessage: `Stress test message #${i}: Virtual windowing at 60 FPS!`,
         timestamp: `${i % 59}m ago`,
         unreadCount: i % 7 === 0 ? (i % 5) + 1 : undefined,
         isOnline: i % 2 === 0,
         messages: [
-          { id: `m_${i}`, senderId: `10k_${i}`, senderName: `${fn} ${ln}`, text: `Stress test message #${i}: Virtual windowing renders only 10 items at 60 FPS!`, timestamp: 'Just now' }
+          { id: `m_${i}`, senderId: `10k_${i}`, senderName: `${fn} ${ln}`, text: `Stress test message #${i}: Virtual windowing at 60 FPS!`, timestamp: 'Just now' }
         ]
       });
     }
 
     setChatList(mock10k);
+    setSelectedChatId(mock10k[0].id);
     setIs10kLoaded(true);
-    showToast('Injected 10,000 Records! Virtual Windowing Active (0ms Freeze, 60 FPS) 🚀');
+    // Persist to IndexedDB in background (non-blocking)
+    idbSaveChats(mock10k).catch(() => {});
+    showToast('Injected 10,000 records — persisted to IndexedDB! Refresh to verify 🚀');
   }, [is10kLoaded, showToast]);
 
   const selectedChat = useMemo(() => 
@@ -560,7 +612,11 @@ export function ChatListCard({
             aria-label="Chats stream" 
             className="overflow-y-auto max-h-[420px] pr-0.5"
           >
-            {filteredChats.length === 0 ? (
+            {isLoadingFromDB ? (
+              <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
+                Loading chats from cache...
+              </div>
+            ) : filteredChats.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400">
                 No chats found
               </div>
