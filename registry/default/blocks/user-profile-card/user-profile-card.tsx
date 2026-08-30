@@ -531,33 +531,36 @@ const AvatarDecorationFrame = React.memo(({ decoration, isUnlocked }: { decorati
 AvatarDecorationFrame.displayName = 'AvatarDecorationFrame';
 
 /* ========================================================
-   BANNER EFFECT OVERLAY RENDERER WITH DYNAMIC PARTICLES
+   AAA DISCORD NITRO COVER BANNER EFFECT OVERLAY (PARALLAX & VECTOR PARTICLES)
 ======================================================== */
 const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: BannerEffect; isUnlocked: boolean }) => {
   if (effect === 'none' || !isUnlocked) return null;
 
   if (effect === 'retrowave_grid') {
     return (
-      <div className="absolute inset-0 bg-gradient-to-t from-pink-600/40 via-purple-950/40 to-transparent backdrop-blur-[1px] pointer-events-none z-10">
+      <div className="absolute inset-0 bg-gradient-to-t from-pink-600/50 via-purple-950/40 to-transparent backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {/* Moving Perspective Laser Grid */}
         <motion.div 
-          animate={{ y: [0, 20] }}
-          transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
-          className="w-full h-full opacity-50 bg-[radial-gradient(#ec4899_2px,transparent_2px)] [background-size:24px_24px]"
+          animate={{ y: [0, 30] }}
+          transition={{ repeat: Infinity, duration: 1.1, ease: 'linear' }}
+          className="w-full h-full opacity-60 bg-[linear-gradient(to_bottom,#ec4899_2px,transparent_2px),linear-gradient(to_right,#ec4899_1.5px,transparent_1.5px)] [background-size:100%_24px,32px_100%]"
         />
+        {/* Horizon Glow Line */}
+        <div className="absolute bottom-0 inset-x-0 h-1 border-t border-pink-400 shadow-[0_0_20px_rgba(236,72,153,1)]" />
       </div>
     );
   }
 
   if (effect === 'hyperdrive_stars') {
     return (
-      <div className="absolute inset-0 bg-indigo-950/30 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        {Array.from({ length: 12 }).map((_, i) => (
+      <div className="absolute inset-0 bg-indigo-950/40 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {Array.from({ length: 16 }).map((_, i) => (
           <motion.div
-            key={`star-streak-${i}`}
-            initial={{ x: -50, y: (i * 20) % 200, opacity: 0 }}
-            animate={{ x: 600, opacity: [0, 1, 0] }}
-            transition={{ repeat: Infinity, duration: 1.5 + (i % 3) * 0.4, delay: i * 0.15, ease: 'linear' }}
-            className="absolute h-0.5 w-12 bg-gradient-to-r from-transparent via-indigo-300 to-transparent rounded-full shadow-[0_0_8px_rgba(129,140,248,0.9)]"
+            key={`star-streak-aaa-${i}`}
+            initial={{ x: -80, y: (i * 18) % 220, opacity: 0 }}
+            animate={{ x: 900, opacity: [0, 1, 0] }}
+            transition={{ repeat: Infinity, duration: 1.2 + (i % 4) * 0.3, delay: i * 0.1, ease: 'linear' }}
+            className="absolute h-0.5 w-20 bg-gradient-to-r from-transparent via-cyan-300 to-transparent rounded-full shadow-[0_0_12px_rgba(34,211,238,1)]"
           />
         ))}
       </div>
@@ -566,16 +569,16 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
 
   if (effect === 'frostbite') {
     return (
-      <div className="absolute inset-0 bg-cyan-500/10 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        {Array.from({ length: 10 }).map((_, i) => (
+      <div className="absolute inset-0 bg-cyan-950/25 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {Array.from({ length: 14 }).map((_, i) => (
           <motion.div
-            key={`snow-${i}`}
-            initial={{ y: -20, x: (i * 60) % 500, opacity: 0 }}
-            animate={{ y: 250, x: ((i * 60) % 500) + (i % 2 === 0 ? 30 : -30), opacity: [0, 0.9, 0] }}
-            transition={{ repeat: Infinity, duration: 3.5 + (i % 2), delay: i * 0.3, ease: 'easeInOut' }}
-            className="absolute text-cyan-200 text-sm drop-shadow-[0_0_6px_rgba(6,182,212,0.9)]"
+            key={`snow-aaa-${i}`}
+            initial={{ y: -30, x: (i * 55) % 600, opacity: 0 }}
+            animate={{ y: 300, x: ((i * 55) % 600) + (i % 2 === 0 ? 40 : -40), opacity: [0, 0.95, 0] }}
+            transition={{ repeat: Infinity, duration: 3.2 + (i % 3) * 0.5, delay: i * 0.25, ease: 'easeInOut' }}
+            className="absolute text-cyan-200 text-base drop-shadow-[0_0_10px_rgba(6,182,212,0.95)]"
           >
-            ❄️
+            ❄️🌨️
           </motion.div>
         ))}
       </div>
@@ -586,24 +589,33 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
     return (
       <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
         <motion.div 
-          animate={{ opacity: [0, 0.8, 0, 0.9, 0] }}
-          transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-          className="w-full h-full bg-indigo-500/25 backdrop-blur-[1px]"
+          animate={{ opacity: [0, 0.95, 0, 1, 0] }}
+          transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+          className="w-full h-full bg-indigo-500/30 backdrop-blur-[1px] shadow-[inset_0_0_50px_rgba(129,140,248,0.6)]"
         />
+        {/* SVG Lightning Bolt Arc */}
+        <motion.svg 
+          animate={{ opacity: [0, 1, 0] }} 
+          transition={{ repeat: Infinity, duration: 1.6, delay: 0.2 }}
+          className="absolute inset-0 w-full h-full text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,1)]"
+          viewBox="0 0 400 150"
+        >
+          <path d="M 50 0 L 120 60 L 100 70 L 180 150 M 250 0 L 220 50 L 240 60 L 190 140" stroke="currentColor" strokeWidth="2" fill="none" />
+        </motion.svg>
       </div>
     );
   }
 
   if (effect === 'gold_dust') {
     return (
-      <div className="absolute inset-0 bg-amber-500/10 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        {Array.from({ length: 10 }).map((_, i) => (
+      <div className="absolute inset-0 bg-amber-500/15 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {Array.from({ length: 14 }).map((_, i) => (
           <motion.div
-            key={`gold-dust-${i}`}
-            initial={{ y: 220, x: (i * 55) % 500, opacity: 0 }}
-            animate={{ y: -10, opacity: [0, 1, 0] }}
-            transition={{ repeat: Infinity, duration: 3 + (i % 2), delay: i * 0.3, ease: 'easeOut' }}
-            className="absolute text-amber-300 text-xs drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]"
+            key={`gold-dust-aaa-${i}`}
+            initial={{ y: 260, x: (i * 50) % 650, opacity: 0, scale: 0.6 }}
+            animate={{ y: -20, opacity: [0, 1, 0], scale: [0.6, 1.4, 0.6] }}
+            transition={{ repeat: Infinity, duration: 2.8 + (i % 2) * 0.6, delay: i * 0.2, ease: 'easeOut' }}
+            className="absolute text-amber-300 text-sm drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]"
           >
             ✨
           </motion.div>
@@ -614,21 +626,52 @@ const BannerEffectOverlay = React.memo(({ effect, isUnlocked }: { effect: Banner
 
   if (effect === 'nebula') {
     return (
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/40 via-pink-600/30 to-indigo-600/40 backdrop-blur-[1px] animate-pulse pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/50 via-pink-600/40 to-indigo-600/50 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        <motion.div 
+          animate={{ scale: [1, 1.12, 1], opacity: [0.6, 0.95, 0.6] }}
+          transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+          className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-pink-500/40 via-purple-600/30 to-transparent blur-md"
+        />
+      </div>
     );
   }
 
   if (effect === 'matrix') {
     return (
-      <div className="absolute inset-0 bg-emerald-950/30 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
-        <div className="w-full h-full opacity-40 bg-[radial-gradient(#34d399_2px,transparent_2px)] [background-size:18px_18px] animate-pulse" />
+      <div className="absolute inset-0 bg-emerald-950/40 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden font-mono text-xs text-emerald-400 font-bold">
+        {Array.from({ length: colCount => 8 }).map((_, col) => (
+          <motion.div
+            key={`banner-matrix-col-${col}`}
+            initial={{ y: -80 }}
+            animate={{ y: 300 }}
+            transition={{ repeat: Infinity, duration: 2.2 + col * 0.3, ease: 'linear', delay: col * 0.2 }}
+            className="absolute flex flex-col gap-1 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+            style={{ left: `${10 + col * 12}%` }}
+          >
+            <span className="text-white">1</span>
+            <span>0</span>
+            <span>1</span>
+          </motion.div>
+        ))}
       </div>
     );
   }
 
   if (effect === 'sakura') {
     return (
-      <div className="absolute inset-0 bg-pink-500/15 backdrop-blur-[1px] pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-pink-500/15 backdrop-blur-[1px] pointer-events-none z-10 overflow-hidden">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <motion.div
+            key={`banner-sakura-${i}`}
+            initial={{ y: -20, x: (i * 55) % 650, opacity: 0, rotate: 0 }}
+            animate={{ y: 280, x: ((i * 55) % 650) + 40, opacity: [0, 1, 0], rotate: 180 }}
+            transition={{ repeat: Infinity, duration: 4 + (i % 3) * 0.5, delay: i * 0.25, ease: 'easeInOut' }}
+            className="absolute text-pink-300 text-base drop-shadow-[0_0_10px_rgba(244,114,182,0.95)]"
+          >
+            🌸
+          </motion.div>
+        ))}
+      </div>
     );
   }
 
