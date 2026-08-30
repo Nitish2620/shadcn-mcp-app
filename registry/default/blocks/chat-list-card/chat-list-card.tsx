@@ -27,28 +27,6 @@ export type { ChatItem, ChatListCardProps, Message };
 const ITEM_HEIGHT = 64; // Height of each chat row in px
 const MSG_HEIGHT = 72; // Estimated height of each message bubble in px
 
-/* ========================================================
-   MNC FAST SVG AVATAR GENERATOR (0KB NETWORK, 0ms SLOW 3G DELAY)
-======================================================== */
-function getFastAvatar(name: string): string {
-  const initials = name.split(' ').map(n => n[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || 'U';
-  const colorPairs = [
-    ['#3b82f6', '#1d4ed8'],
-    ['#10b981', '#047857'],
-    ['#8b5cf6', '#6d28d9'],
-    ['#f59e0b', '#b45309'],
-    ['#ec4899', '#be185d'],
-    ['#06b6d4', '#0e7490']
-  ];
-  let charCodeSum = 0;
-  for (let i = 0; i < name.length; i++) charCodeSum += name.charCodeAt(i);
-  const [c1, c2] = colorPairs[charCodeSum % colorPairs.length];
-  
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs><rect width="80" height="80" rx="40" fill="url(#g)"/><text x="50%" y="54%" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
-  
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 const INITIAL_CHATS: ChatItem[] = [
   {
     id: '1',
@@ -119,6 +97,57 @@ const INITIAL_CHATS: ChatItem[] = [
 ];
 
 /* ========================================================
+   INSTANT MNC AVATAR SYSTEM (0ms Slow 3G Latency)
+======================================================== */
+const GRADIENTS = [
+  'from-blue-500 to-indigo-600',
+  'from-emerald-500 to-teal-600',
+  'from-violet-500 to-purple-600',
+  'from-amber-500 to-orange-600',
+  'from-rose-500 to-pink-600',
+  'from-cyan-500 to-blue-600'
+];
+
+function getInitials(name: string): string {
+  if (!name) return '??';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function getGradient(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
+}
+
+const AvatarWithFallback = React.memo(({ name, src, size = "w-11 h-11" }: { name: string; src?: string; size?: string }) => {
+  const [imgError, setImgError] = useState(false);
+  const initials = useMemo(() => getInitials(name), [name]);
+  const gradient = useMemo(() => getGradient(name), [name]);
+
+  if (!src || imgError) {
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br ${gradient} text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-800 shrink-0 shadow-2xs`}>
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      loading="lazy"
+      decoding="async"
+      onError={() => setImgError(true)}
+      className={`${size} rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 shrink-0`}
+    />
+  );
+});
+AvatarWithFallback.displayName = 'AvatarWithFallback';
+
+/* ========================================================
    MEMOIZED ROW SUB-COMPONENT (HIGH TRAFFIC OPTIMIZED)
 ======================================================== */
 const ChatRowItem = React.memo(({ 
@@ -130,12 +159,6 @@ const ChatRowItem = React.memo(({
   isSelected: boolean; 
   onSelect: (id: string) => void; 
 }) => {
-  const [imgSrc, setImgSrc] = useState(chat.avatar || getFastAvatar(chat.name));
-
-  const handleImgError = () => {
-    setImgSrc(getFastAvatar(chat.name));
-  };
-
   return (
     <div
       role="button"
@@ -144,27 +167,16 @@ const ChatRowItem = React.memo(({
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(chat.id)}
       aria-label={`Chat with ${chat.name}`}
       data-state={isSelected ? "selected" : "idle"}
-      style={{ 
-        height: `${ITEM_HEIGHT}px`,
-        contentVisibility: 'auto',
-        containIntrinsicSize: `${ITEM_HEIGHT}px`
-      }}
+      style={{ height: `${ITEM_HEIGHT}px` }}
       className={`py-2 px-2 flex items-center gap-3 rounded-2xl cursor-pointer transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
         isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
       }`}
     >
-      {/* Avatar with Online Badge */}
+      {/* Instant Avatar with Online Badge */}
       <div className="relative shrink-0">
-        <img
-          src={imgSrc}
-          alt={chat.name}
-          onError={handleImgError}
-          loading="lazy"
-          decoding="async"
-          className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 bg-slate-200 dark:bg-slate-800"
-        />
+        <AvatarWithFallback name={chat.name} src={chat.avatar} size="w-11 h-11" />
         {chat.isOnline && (
-          <span className="w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0" />
+          <span className="w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />
         )}
       </div>
 
@@ -201,13 +213,7 @@ ChatRowItem.displayName = 'ChatRowItem';
 ======================================================== */
 const MessageBubble = React.memo(({ msg }: { msg: Message }) => {
   return (
-    <div 
-      style={{
-        contentVisibility: 'auto',
-        containIntrinsicSize: `${MSG_HEIGHT}px`
-      }}
-      className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-150`}
-    >
+    <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}>
       <div className={`max-w-[80%] p-3 rounded-2xl text-xs ${
         msg.isMe 
           ? 'bg-blue-600 text-white rounded-tr-none shadow-xs' 
@@ -224,6 +230,9 @@ const MessageBubble = React.memo(({ msg }: { msg: Message }) => {
 });
 MessageBubble.displayName = 'MessageBubble';
 
+/* ========================================================
+   MAIN CHAT LIST CARD COMPONENT (WITH VIRTUALIZED WINDOWING)
+======================================================== */
 /* ========================================================
    IndexedDB PERSISTENCE LAYER (Supports 100k+ Records)
    localStorage caps at ~5MB. IndexedDB handles 100s of MB.
@@ -294,7 +303,6 @@ export function ChatListCard({
   const selectedChat = useMemo(() => 
     chatList.find(c => c.id === selectedChatId) || chatList[0],
   [chatList, selectedChatId]);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'pinned'>('all');
@@ -307,9 +315,6 @@ export function ChatListCard({
 
   // Derived stress load states
   const is10kLoaded = useMemo(() => chatList.length > 50, [chatList.length]);
-  const isMsgStressLoaded = useMemo(() => 
-    (selectedChat?.messages?.length || 0) > 100, 
-  [selectedChat?.messages?.length]);
 
   // Load persisted stress-test data from IndexedDB on mount
   useEffect(() => {
@@ -403,7 +408,7 @@ export function ChatListCard({
     } catch {}
   }, [soundEnabled]);
 
-  // 10,000 ROW STRESS TEST GENERATOR — FAST ZERO NETWORK AVATARS
+  // 10,000 ROW STRESS TEST GENERATOR — persists to IndexedDB
   const handleInject10kData = useCallback(() => {
     if (is10kLoaded) {
       idbClearChats().catch(() => {});
@@ -420,25 +425,30 @@ export function ChatListCard({
     for (let i = 1; i <= 10000; i++) {
       const fn = firstNames[i % firstNames.length];
       const ln = lastNames[i % lastNames.length];
-      const name = `${fn} ${ln} #${i}`;
       mock10k.push({
         id: `10k_${i}`,
-        name,
-        avatar: getFastAvatar(name),
-        lastMessage: `Stress test message #${i}: 0ms network latency on Slow 3G!`,
+        name: `${fn} ${ln} #${i}`,
+        avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+        lastMessage: `Stress test message #${i}: Virtual windowing at 60 FPS!`,
         timestamp: `${i % 59}m ago`,
         unreadCount: i % 7 === 0 ? (i % 5) + 1 : undefined,
         isOnline: i % 2 === 0,
         messages: [
-          { id: `m_${i}`, senderId: `10k_${i}`, senderName: name, text: `Stress test message #${i}: 0ms network latency on Slow 3G!`, timestamp: 'Just now' }
+          { id: `m_${i}`, senderId: `10k_${i}`, senderName: `${fn} ${ln}`, text: `Stress test message #${i}: Virtual windowing at 60 FPS!`, timestamp: 'Just now' }
         ]
       });
     }
 
     setChatList(mock10k);
     setSelectedChatId(mock10k[0].id);
-    showToast('Injected 10,000 records — 0ms Slow 3G load! 🚀');
+    // Persist to IndexedDB in background (non-blocking)
+    idbSaveChats(mock10k).catch(() => {});
+    showToast('Injected 10,000 records — persisted to IndexedDB! Refresh to verify 🚀');
   }, [is10kLoaded, showToast]);
+
+  const isMsgStressLoaded = useMemo(() => 
+    (selectedChat?.messages?.length || 0) > 100, 
+  [selectedChat?.messages?.length]);
 
   // 100,000 MESSAGES INJECTION INTO SELECTED CHAT (RIGHT PANEL STRESS TEST)
   const handleInject100kMessages = useCallback(() => {
@@ -629,7 +639,7 @@ export function ChatListCard({
     const newChat: ChatItem = {
       id: Date.now().toString(),
       name: newChatName.trim(),
-      avatar: getFastAvatar(newChatName.trim()),
+      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
       lastMessage: 'Chat started',
       timestamp: 'Just now',
       isOnline: true,
@@ -803,8 +813,8 @@ export function ChatListCard({
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 relative">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <img src={selectedChat.avatar} alt={selectedChat.name} loading="lazy" decoding="async" className="w-10 h-10 rounded-full object-cover" />
-                    {selectedChat.isOnline && <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0" />}
+                    <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-10 h-10" />
+                    {selectedChat.isOnline && <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />}
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">{selectedChat.name}</h3>
@@ -938,7 +948,9 @@ export function ChatListCard({
             <div className="flex justify-end">
               <button type="button" onClick={() => setShowProfileModal(false)} className="cursor-pointer"><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-            <img src={selectedChat.avatar} alt={selectedChat.name} className="w-20 h-20 rounded-full object-cover mx-auto ring-4 ring-blue-500/20" />
+            <div className="mx-auto flex justify-center">
+              <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-20 h-20" />
+            </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedChat.name}</h3>
               <p className="text-xs text-emerald-600 font-medium mt-0.5">{selectedChat.statusText || 'Active now'}</p>
