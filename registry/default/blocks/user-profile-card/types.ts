@@ -24,7 +24,12 @@ export type BannerEffect =
   | 'frostbite' 
   | 'lightning'
   | 'retrowave_grid'
-  | 'hyperdrive_stars';
+  | 'hyperdrive_stars'
+  | 'cyberpunk_anime_city'
+  | 'cyber_dragon_void'
+  | 'arcade_synthwave_sunset'
+  | 'starlight_warp_nebula'
+  | 'sakura_moonlight_temple';
 
 export type ProfileEffect = 
   | 'none' 
