@@ -32,8 +32,6 @@ import {
   MoreHorizontal,
   Layers,
   Award,
-  Sun,
-  Radio,
   Palette
 } from 'lucide-react';
 import type { 
