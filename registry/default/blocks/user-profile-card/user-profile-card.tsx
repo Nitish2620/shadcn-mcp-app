@@ -27,12 +27,8 @@ import {
   Globe,
   ShieldAlert,
   Music,
-  Code2,
-  Sparkle,
   Lock,
-  CreditCard,
   CheckCircle,
-  Star,
   MoreHorizontal
 } from 'lucide-react';
 import type { 
@@ -319,7 +315,6 @@ export function UserProfileCard({
 
   // Feature Lock Helpers
   const isNitroPro = subscriptionTier === 'nitro_pro';
-  const isNitroBasicOrHigher = subscriptionTier === 'nitro_basic' || subscriptionTier === 'nitro_pro';
 
   // Auto-Hydration from IndexedDB
   useEffect(() => {
