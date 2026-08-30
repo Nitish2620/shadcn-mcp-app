@@ -1,20 +1,20 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "pricing-table",
-  "type": "registry:component",
+  "type": "registry:block",
   "title": "Pricing Table",
   "description": "Responsive MNC-grade pricing table component with monthly/yearly billing toggle, popular badge, and feature lists.",
   "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
   "files": [
     {
-      "path": "src/components/monetization/PricingTable.tsx",
+      "path": "registry/default/blocks/pricing-table/pricing-table.tsx",
       "type": "registry:component",
-      "target": "components/monetization/PricingTable.tsx"
+      "target": "components/blocks/pricing-table/pricing-table.tsx"
     },
     {
-      "path": "src/components/monetization/types.ts",
+      "path": "registry/default/blocks/pricing-table/types.ts",
       "type": "registry:lib",
-      "target": "components/monetization/types.ts"
+      "target": "components/blocks/pricing-table/types.ts"
     }
   ]
 }

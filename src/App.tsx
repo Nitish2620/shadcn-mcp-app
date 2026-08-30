@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { SocialPostCard } from './components/social/SocialPostCard';
-import { PricingTable } from './components/monetization/PricingTable';
+import { SocialPostCard } from '../registry/default/blocks/social-post-card/social-post-card';
+import { PricingTable } from '../registry/default/blocks/pricing-table/pricing-table';
 import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, ShieldCheck, Key, Lock, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid } from 'lucide-react';
 
 interface ComponentItem {
