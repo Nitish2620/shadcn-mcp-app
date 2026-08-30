@@ -254,6 +254,10 @@ export function ChatListCard({
 }: ChatListCardProps) {
   const [chatList, setChatList] = useState<ChatItem[]>(chats);
   const [selectedChatId, setSelectedChatId] = useState<string | null>('1');
+
+  const selectedChat = useMemo(() => 
+    chatList.find(c => c.id === selectedChatId) || chatList[0],
+  [chatList, selectedChatId]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'pinned'>('all');
@@ -261,8 +265,11 @@ export function ChatListCard({
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatName, setNewChatName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [is10kLoaded, setIs10kLoaded] = useState(false);
   const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
+  const [isDBReady, setIsDBReady] = useState(false);
+
+  // Derived stress load states
+  const is10kLoaded = useMemo(() => chatList.length > 50, [chatList.length]);
 
   // Load persisted stress-test data from IndexedDB on mount
   useEffect(() => {
@@ -270,16 +277,30 @@ export function ChatListCard({
     idbLoadChats()
       .then(stored => {
         if (cancelled) return;
-        if (stored) {
+        if (stored && stored.length > 0) {
           setChatList(stored);
           setSelectedChatId(stored[0]?.id || '1');
-          setIs10kLoaded(true);
         }
       })
       .catch(() => {})
-      .finally(() => { if (!cancelled) setIsLoadingFromDB(false); });
+      .finally(() => { 
+        if (!cancelled) {
+          setIsLoadingFromDB(false);
+          setIsDBReady(true);
+        }
+      });
     return () => { cancelled = true; };
   }, []);
+
+  // Auto-persist chatList to IndexedDB whenever it changes after initial mount
+  useEffect(() => {
+    if (!isDBReady) return;
+    if (chatList.length === INITIAL_CHATS.length && chatList === INITIAL_CHATS) {
+      idbClearChats().catch(() => {});
+    } else {
+      idbSaveChats(chatList).catch(() => {});
+    }
+  }, [chatList, isDBReady]);
 
   // Virtual Windowing State for 10,000+ Items (Zero Browser Freeze)
   const [scrollTop, setScrollTop] = useState(0);
@@ -288,7 +309,6 @@ export function ChatListCard({
   // Virtual Windowing State for Messages Stream (Right Panel)
   const [msgScrollTop, setMsgScrollTop] = useState(0);
   const msgScrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isMsgStressLoaded, setIsMsgStressLoaded] = useState(false);
 
   // Context Menu State
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -349,7 +369,6 @@ export function ChatListCard({
       idbClearChats().catch(() => {});
       setChatList(INITIAL_CHATS);
       setSelectedChatId('1');
-      setIs10kLoaded(false);
       showToast('Reset to 5 initial chats (cache cleared) 🔄');
       return;
     }
@@ -377,15 +396,14 @@ export function ChatListCard({
 
     setChatList(mock10k);
     setSelectedChatId(mock10k[0].id);
-    setIs10kLoaded(true);
     // Persist to IndexedDB in background (non-blocking)
     idbSaveChats(mock10k).catch(() => {});
     showToast('Injected 10,000 records — persisted to IndexedDB! Refresh to verify 🚀');
   }, [is10kLoaded, showToast]);
 
-  const selectedChat = useMemo(() => 
-    chatList.find(c => c.id === selectedChatId) || chatList[0],
-  [chatList, selectedChatId]);
+  const isMsgStressLoaded = useMemo(() => 
+    (selectedChat?.messages?.length || 0) > 100, 
+  [selectedChat?.messages?.length]);
 
   // 100,000 MESSAGES INJECTION INTO SELECTED CHAT (RIGHT PANEL STRESS TEST)
   const handleInject100kMessages = useCallback(() => {
@@ -399,7 +417,6 @@ export function ChatListCard({
         }
         return c;
       }));
-      setIsMsgStressLoaded(false);
       setMsgScrollTop(0);
       showToast('Reset messages to original 🔄');
       return;
@@ -450,8 +467,7 @@ export function ChatListCard({
       }
       return c;
     }));
-    setIsMsgStressLoaded(true);
-    showToast('Injected 100,000 messages — virtual windowing active! 🚀');
+    showToast('Injected 100,000 messages — persisted to IndexedDB! Refresh to verify 🚀');
 
     // Scroll to bottom after injection
     setTimeout(() => {
