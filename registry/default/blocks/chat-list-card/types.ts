@@ -1,3 +1,16 @@
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  users: string[];
+}
+
+export interface MessageAttachment {
+  name: string;
+  url: string;
+  type: 'image' | 'file';
+  size?: string;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -6,6 +19,8 @@ export interface Message {
   timestamp: string;
   isMe?: boolean;
   status?: 'sent' | 'delivered' | 'read';
+  reactions?: MessageReaction[];
+  attachment?: MessageAttachment;
 }
 
 export interface ChatItem {

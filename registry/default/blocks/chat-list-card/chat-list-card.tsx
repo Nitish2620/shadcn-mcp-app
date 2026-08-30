@@ -7,9 +7,9 @@ import {
   Video, 
   MoreHorizontal, 
   Pin, 
+  PinOff,
   CheckCheck, 
   X, 
-  Smile, 
   Paperclip, 
   Sparkles,
   Volume2,
@@ -17,14 +17,18 @@ import {
   User,
   Share2,
   Ban,
-  Trash2
+  Trash2,
+  SmilePlus,
+  FileText
 } from 'lucide-react';
-import type { ChatItem, ChatListCardProps, Message } from './types';
+import type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction } from './types';
 
-export type { ChatItem, ChatListCardProps, Message };
+export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction };
 
-const ITEM_HEIGHT = 64; // Height of each chat row in px
-const MSG_HEIGHT = 72; // Estimated height of each message bubble in px
+const ITEM_HEIGHT = 68; // Height of each chat row in px
+const MSG_HEIGHT = 80;  // Height of each message bubble in px
+
+const REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
 const INITIAL_CHATS: ChatItem[] = [
   {
@@ -39,8 +43,8 @@ const INITIAL_CHATS: ChatItem[] = [
     statusText: 'Active now',
     messages: [
       { id: 'm1', senderId: '1', senderName: 'Priya Sharma', text: 'Hey Ray! Did you check the latest design assets?', timestamp: '1:15 PM' },
-      { id: 'm2', senderId: 'me', senderName: 'You', text: 'Yes, looking at them now. They look great!', timestamp: '1:18 PM', isMe: true, status: 'read' },
-      { id: 'm3', senderId: '1', senderName: 'Priya Sharma', text: "I've sent the files over.", timestamp: '1:20 PM' }
+      { id: 'm2', senderId: 'me', senderName: 'You', text: 'Yes, looking at them now. They look great!', timestamp: '1:18 PM', isMe: true, status: 'read', reactions: [{ emoji: '👍', count: 1, users: ['1'] }] },
+      { id: 'm3', senderId: '1', senderName: 'Priya Sharma', text: "I've sent the files over.", timestamp: '1:20 PM', reactions: [{ emoji: '❤️', count: 1, users: ['me'] }] }
     ]
   },
   {
@@ -147,7 +151,7 @@ const AvatarWithFallback = React.memo(({ name, src, size = "w-11 h-11" }: { name
 AvatarWithFallback.displayName = 'AvatarWithFallback';
 
 /* ========================================================
-   MEMOIZED ROW SUB-COMPONENT (HIGH TRAFFIC OPTIMIZED)
+   MEMOIZED CHAT ROW ITEM
 ======================================================== */
 const ChatRowItem = React.memo(({ 
   chat, 
@@ -167,24 +171,24 @@ const ChatRowItem = React.memo(({
       aria-label={`Chat with ${chat.name}`}
       data-state={isSelected ? "selected" : "idle"}
       style={{ height: `${ITEM_HEIGHT}px` }}
-      className={`py-2 px-2 flex items-center gap-3 rounded-2xl cursor-pointer transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-        isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+      className={`py-2 px-3 flex items-center gap-3 rounded-2xl cursor-pointer transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+        isSelected ? 'bg-blue-50/90 dark:bg-blue-950/50 ring-1 ring-blue-500/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
       }`}
     >
-      {/* Instant Avatar with Online Badge */}
+      {/* Avatar with Online Status */}
       <div className="relative shrink-0">
-        <AvatarWithFallback name={chat.name} src={chat.avatar} size="w-11 h-11" />
+        <AvatarWithFallback name={chat.name} src={chat.avatar} size="w-12 h-12" />
         {chat.isOnline && (
-          <span className="w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />
+          <span className="w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />
         )}
       </div>
 
-      {/* Content */}
+      {/* Details */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1 mb-0.5">
-          <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate flex items-center gap-1">
+          <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate flex items-center gap-1.5">
             {chat.name}
-            {chat.isPinned && <Pin className="w-3 h-3 text-amber-500 shrink-0" />}
+            {chat.isPinned && <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
           </span>
           <span className="text-[11px] text-slate-400 shrink-0 font-medium">
             {chat.timestamp}
@@ -208,21 +212,98 @@ const ChatRowItem = React.memo(({
 ChatRowItem.displayName = 'ChatRowItem';
 
 /* ========================================================
-   MEMOIZED MESSAGE BUBBLE SUB-COMPONENT
+   MEMOIZED INTERACTIVE MESSAGE BUBBLE WITH REACTIONS
 ======================================================== */
-const MessageBubble = React.memo(({ msg }: { msg: Message }) => {
+const MessageBubble = React.memo(({ 
+  msg, 
+  onToggleReaction 
+}: { 
+  msg: Message; 
+  onToggleReaction: (msgId: string, emoji: string) => void; 
+}) => {
+  const [showPicker, setShowPicker] = useState(false);
+
   return (
-    <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}>
-      <div className={`max-w-[80%] p-3 rounded-2xl text-xs ${
-        msg.isMe 
-          ? 'bg-blue-600 text-white rounded-tr-none shadow-xs' 
-          : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-none'
-      }`}>
-        <p className="leading-relaxed break-words">{msg.text}</p>
+    <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200 group relative`}>
+      {/* Bubble Container */}
+      <div className="relative group">
+        <div className={`max-w-[85%] p-3.5 rounded-2xl text-xs shadow-2xs relative ${
+          msg.isMe 
+            ? 'bg-blue-600 text-white rounded-tr-none' 
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50'
+        }`}>
+          {/* Attachment Preview if exists */}
+          {msg.attachment && (
+            <div className="mb-2 rounded-xl overflow-hidden border border-white/20">
+              {msg.attachment.type === 'image' ? (
+                <img src={msg.attachment.url} alt={msg.attachment.name} className="max-h-48 w-full object-cover rounded-lg" />
+              ) : (
+                <div className="flex items-center gap-2 p-2 bg-black/10 dark:bg-white/10 rounded-lg text-xs font-semibold">
+                  <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span className="truncate">{msg.attachment.name}</span>
+                  {msg.attachment.size && <span className="text-[10px] opacity-75 shrink-0">({msg.attachment.size})</span>}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="leading-relaxed break-words">{msg.text}</p>
+
+          {/* Message Action Trigger (Emoji reaction button) */}
+          <button
+            type="button"
+            onClick={() => setShowPicker(!showPicker)}
+            aria-label="Add reaction"
+            className={`absolute top-1 ${msg.isMe ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer`}
+          >
+            <SmilePlus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Emoji Picker Popover */}
+          {showPicker && (
+            <div className={`absolute -top-10 ${msg.isMe ? 'right-0' : 'left-0'} z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-full px-2 py-1 flex items-center gap-1 animate-in fade-in zoom-in-95`}>
+              {REACTION_EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => {
+                    onToggleReaction(msg.id, emoji);
+                    setShowPicker(false);
+                  }}
+                  className="hover:scale-125 transition text-sm cursor-pointer p-0.5"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reaction Badges */}
+        {msg.reactions && msg.reactions.length > 0 && (
+          <div className={`flex flex-wrap items-center gap-1 mt-1 ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
+            {msg.reactions.map(r => (
+              <button
+                key={r.emoji}
+                type="button"
+                onClick={() => onToggleReaction(msg.id, r.emoji)}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 transition cursor-pointer ${
+                  r.users.includes('me')
+                    ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                <span>{r.emoji}</span>
+                <span>{r.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
       <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 px-1">
         <span>{msg.timestamp}</span>
-        {msg.isMe && <CheckCheck className="w-3 h-3 text-blue-500" />}
+        {msg.isMe && <CheckCheck className="w-3.5 h-3.5 text-blue-500" />}
       </div>
     </div>
   );
@@ -230,11 +311,7 @@ const MessageBubble = React.memo(({ msg }: { msg: Message }) => {
 MessageBubble.displayName = 'MessageBubble';
 
 /* ========================================================
-   MAIN CHAT LIST CARD COMPONENT (WITH VIRTUALIZED WINDOWING)
-======================================================== */
-/* ========================================================
-   IndexedDB PERSISTENCE LAYER (Supports 100k+ Records)
-   localStorage caps at ~5MB. IndexedDB handles 100s of MB.
+   IndexedDB PERSISTENCE LAYER
 ======================================================== */
 const IDB_NAME = 'ChatStressTestDB';
 const IDB_STORE = 'chats';
@@ -292,8 +369,11 @@ function idbClearChats(): Promise<void> {
   });
 }
 
+/* ========================================================
+   MAIN CHAT LIST CARD COMPONENT (EXPANDED MNC PRO GRADE)
+======================================================== */
 export function ChatListCard({
-  title = "Chats",
+  title = "Messages",
   chats = INITIAL_CHATS
 }: ChatListCardProps) {
   const [chatList, setChatList] = useState<ChatItem[]>(chats);
@@ -302,6 +382,7 @@ export function ChatListCard({
   const selectedChat = useMemo(() => 
     chatList.find(c => c.id === selectedChatId) || chatList[0],
   [chatList, selectedChatId]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'pinned'>('all');
@@ -311,20 +392,37 @@ export function ChatListCard({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
-  // Progressive Hydration: Fast initial paint (< 20ms) then background load
+  // File Upload Draft State
+  const [draftAttachment, setDraftAttachment] = useState<MessageAttachment | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Virtual Windowing States
+  const [scrollTop, setScrollTop] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [msgScrollTop, setMsgScrollTop] = useState(0);
+  const msgScrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Context Menu & Profile Modal State
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Progressive Hydration
   useEffect(() => {
     let cancelled = false;
     idbLoadChats()
       .then(stored => {
         if (cancelled) return;
         if (stored && stored.length > 0) {
-          // Fast Initial Paint: render first 50 items instantly (< 20ms)!
           setChatList(stored.slice(0, 50));
           setSelectedChatId(stored[0]?.id || '1');
           setIsLoadingFromDB(false);
 
-          // Background Idle Hydration: Load rest of dataset after initial paint
           if (stored.length > 50 || stored.some(c => c.messages.length > 50)) {
             setTimeout(() => {
               if (!cancelled) {
@@ -349,7 +447,7 @@ export function ChatListCard({
     return () => { cancelled = true; };
   }, []);
 
-  // Debounced Background Auto-Save (500ms delay to avoid main-thread blocking)
+  // Debounced Auto-Save
   useEffect(() => {
     if (!isDBReady) return;
     const saveTimer = setTimeout(() => {
@@ -362,23 +460,7 @@ export function ChatListCard({
     return () => clearTimeout(saveTimer);
   }, [chatList, isDBReady]);
 
-  // Virtual Windowing State for 10,000+ Items (Zero Browser Freeze)
-  const [scrollTop, setScrollTop] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Virtual Windowing State for Messages Stream (Right Panel)
-  const [msgScrollTop, setMsgScrollTop] = useState(0);
-  const msgScrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Context Menu State
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close context menu on outside click with proper event listener unmounting (Zero Memory Leak)
+  // Outside click listener for context menu
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
@@ -389,31 +471,31 @@ export function ChatListCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search for high traffic stream filtering
+  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 200);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Auto-scroll to bottom of messages stream
+  // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedChatId, chatList]);
+  }, [selectedChatId, chatList, isTyping]);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   }, []);
 
-  // Audio Haptic Feedback Synthesizer
-  const playSoundEffect = useCallback((type: 'send' | 'select' = 'send') => {
+  // Audio Haptic Synthesizer
+  const playSoundEffect = useCallback((type: 'send' | 'select' | 'pop' = 'send') => {
     if (!soundEnabled) return;
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(type === 'send' ? 660 : 440, ctx.currentTime);
+      osc.frequency.setValueAtTime(type === 'send' ? 660 : type === 'pop' ? 880 : 440, ctx.currentTime);
       gain.gain.setValueAtTime(0.06, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
       osc.connect(gain);
@@ -423,9 +505,10 @@ export function ChatListCard({
     } catch {}
   }, [soundEnabled]);
 
+  // Filter & Smart Pin Sorting (Pinned items float to top)
   const filteredChats = useMemo(() => {
     const query = debouncedQuery.toLowerCase().trim();
-    return chatList.filter(c => {
+    const list = chatList.filter(c => {
       if (filterTab === 'unread') return (c.unreadCount || 0) > 0;
       if (filterTab === 'pinned') return c.isPinned;
       if (query) {
@@ -433,11 +516,12 @@ export function ChatListCard({
       }
       return true;
     });
+
+    // Sort pinned to top
+    return [...list].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
   }, [chatList, debouncedQuery, filterTab]);
 
-  /* ========================================================
-     VIRTUALIZED WINDOWING — CHAT LIST (LEFT PANEL)
-  ======================================================== */
+  // Virtual Windowing - Left List
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
   };
@@ -445,27 +529,19 @@ export function ChatListCard({
   const virtualSlice = useMemo(() => {
     const totalCount = filteredChats.length;
     if (totalCount <= 20) {
-      return {
-        items: filteredChats,
-        paddingTop: 0,
-        paddingBottom: 0
-      };
+      return { items: filteredChats, paddingTop: 0, paddingBottom: 0 };
     }
-
-    const containerHeight = 420;
+    const containerHeight = 520;
     const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - 3);
     const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / ITEM_HEIGHT) + 6);
-
-    const items = filteredChats.slice(startIndex, endIndex);
-    const paddingTop = startIndex * ITEM_HEIGHT;
-    const paddingBottom = (totalCount - endIndex) * ITEM_HEIGHT;
-
-    return { items, paddingTop, paddingBottom };
+    return {
+      items: filteredChats.slice(startIndex, endIndex),
+      paddingTop: startIndex * ITEM_HEIGHT,
+      paddingBottom: (totalCount - endIndex) * ITEM_HEIGHT
+    };
   }, [filteredChats, scrollTop]);
 
-  /* ========================================================
-     VIRTUALIZED WINDOWING — MESSAGES STREAM (RIGHT PANEL)
-  ======================================================== */
+  // Virtual Windowing - Right Message Stream
   const handleMsgScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setMsgScrollTop(e.currentTarget.scrollTop);
   };
@@ -474,27 +550,75 @@ export function ChatListCard({
     const msgs = selectedChat?.messages || [];
     const totalCount = msgs.length;
     if (totalCount <= 30) {
-      return {
-        items: msgs,
-        paddingTop: 0,
-        paddingBottom: 0
-      };
+      return { items: msgs, paddingTop: 0, paddingBottom: 0 };
     }
-
-    const containerHeight = 350;
+    const containerHeight = 440;
     const startIndex = Math.max(0, Math.floor(msgScrollTop / MSG_HEIGHT) - 5);
     const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / MSG_HEIGHT) + 10);
-
-    const items = msgs.slice(startIndex, endIndex);
-    const paddingTop = startIndex * MSG_HEIGHT;
-    const paddingBottom = (totalCount - endIndex) * MSG_HEIGHT;
-
-    return { items, paddingTop, paddingBottom };
+    return {
+      items: msgs.slice(startIndex, endIndex),
+      paddingTop: startIndex * MSG_HEIGHT,
+      paddingBottom: (totalCount - endIndex) * MSG_HEIGHT
+    };
   }, [selectedChat?.messages, msgScrollTop]);
 
+  // Deep Logic: Message Emoji Reaction Toggle Handler
+  const handleToggleReaction = useCallback((msgId: string, emoji: string) => {
+    if (!selectedChat) return;
+    playSoundEffect('pop');
+
+    setChatList(prev => prev.map(c => {
+      if (c.id === selectedChat.id) {
+        const updatedMessages = c.messages.map(m => {
+          if (m.id === msgId) {
+            const currentReactions = m.reactions || [];
+            const existingIndex = currentReactions.findIndex(r => r.emoji === emoji);
+
+            let newReactions: MessageReaction[] = [];
+            if (existingIndex >= 0) {
+              const r = currentReactions[existingIndex];
+              const hasMe = r.users.includes('me');
+              if (hasMe && r.count === 1) {
+                newReactions = currentReactions.filter(x => x.emoji !== emoji);
+              } else if (hasMe) {
+                newReactions = currentReactions.map(x => x.emoji === emoji ? { ...x, count: x.count - 1, users: x.users.filter(u => u !== 'me') } : x);
+              } else {
+                newReactions = currentReactions.map(x => x.emoji === emoji ? { ...x, count: x.count + 1, users: [...x.users, 'me'] } : x);
+              }
+            } else {
+              newReactions = [...currentReactions, { emoji, count: 1, users: ['me'] }];
+            }
+            return { ...m, reactions: newReactions };
+          }
+          return m;
+        });
+        return { ...c, messages: updatedMessages };
+      }
+      return c;
+    }));
+  }, [selectedChat, playSoundEffect]);
+
+  // File Upload Selection Handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImg = file.type.startsWith('image/');
+    const url = URL.createObjectURL(file);
+    const sizeStr = `${(file.size / 1024 / 1024).toFixed(1)} MB`;
+
+    setDraftAttachment({
+      name: file.name,
+      url,
+      type: isImg ? 'image' : 'file',
+      size: sizeStr
+    });
+  };
+
+  // Deep Logic: Send Message & Trigger AI Responder
   const handleSendMessage = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessageText.trim() || !selectedChat) return;
+    if ((!newMessageText.trim() && !draftAttachment) || !selectedChat) return;
 
     playSoundEffect('send');
 
@@ -502,10 +626,11 @@ export function ChatListCard({
       id: Date.now().toString(),
       senderId: 'me',
       senderName: 'You',
-      text: newMessageText.trim(),
+      text: newMessageText.trim() || (draftAttachment ? `Shared attachment: ${draftAttachment.name}` : ''),
       timestamp: 'Just now',
       isMe: true,
-      status: 'read'
+      status: 'read',
+      attachment: draftAttachment || undefined
     };
 
     setChatList(prev => prev.map(c => {
@@ -522,7 +647,49 @@ export function ChatListCard({
     }));
 
     setNewMessageText('');
-  }, [newMessageText, selectedChat, playSoundEffect]);
+    setDraftAttachment(null);
+
+    // AI Auto-Responder Deep Logic
+    const currentChatId = selectedChat.id;
+    const currentContactName = selectedChat.name;
+
+    setTimeout(() => {
+      setIsTyping(true);
+    }, 400);
+
+    setTimeout(() => {
+      setIsTyping(false);
+      playSoundEffect('pop');
+
+      const aiReplies = [
+        `Thanks for sending that over, Ray! Checking it right now. 👍`,
+        `Got it! Looks great on my end. Let's sync on tomorrow's call. 🚀`,
+        `Appreciate the update! I will review and get back to you shortly.`,
+        `Perfect! I've logged this in the project tracker.`
+      ];
+      const randomReply = aiReplies[Math.floor(Math.random() * aiReplies.length)];
+
+      const autoMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        senderId: currentChatId,
+        senderName: currentContactName,
+        text: randomReply,
+        timestamp: 'Just now'
+      };
+
+      setChatList(prev => prev.map(c => {
+        if (c.id === currentChatId) {
+          return {
+            ...c,
+            lastMessage: autoMsg.text,
+            timestamp: 'Just now',
+            messages: [...c.messages, autoMsg]
+          };
+        }
+        return c;
+      }));
+    }, 1800);
+  }, [newMessageText, draftAttachment, selectedChat, playSoundEffect]);
 
   const handleSelectChat = useCallback((id: string) => {
     playSoundEffect('select');
@@ -540,7 +707,7 @@ export function ChatListCard({
     const newChat: ChatItem = {
       id: Date.now().toString(),
       name: newChatName.trim(),
-      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      avatar: '',
       lastMessage: 'Chat started',
       timestamp: 'Just now',
       isOnline: true,
@@ -568,6 +735,15 @@ export function ChatListCard({
     showToast('Chat link copied to clipboard 🔗');
   };
 
+  const handleTogglePinChat = () => {
+    setShowContextMenu(false);
+    if (!selectedChat) return;
+
+    const newPinState = !selectedChat.isPinned;
+    setChatList(prev => prev.map(c => c.id === selectedChat.id ? { ...c, isPinned: newPinState } : c));
+    showToast(newPinState ? `Pinned chat with ${selectedChat.name} 📌` : `Unpinned chat 📍`);
+  };
+
   const handleBlockUser = () => {
     setShowContextMenu(false);
     showToast(`Blocked ${selectedChat?.name} 🚫`);
@@ -585,7 +761,7 @@ export function ChatListCard({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto font-sans relative">
+    <div className="w-full max-w-7xl mx-auto font-sans relative">
       {/* Toast Notification */}
       {toastMessage && (
         <div role="status" className="fixed top-5 right-5 z-50 bg-slate-900/95 dark:bg-slate-100/95 text-white dark:text-slate-900 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2 animate-in fade-in backdrop-blur-md">
@@ -594,90 +770,93 @@ export function ChatListCard({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* EXPANDED DESKTOP WIDESCREEN LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[680px]">
         
-        {/* Left Side: Chats List Card (Matches Screenshot Design) */}
-        <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col space-y-4">
+        {/* Left Side: Chats Sidebar Card */}
+        <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-4 h-full">
           
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                aria-label={soundEnabled ? "Mute audio" : "Unmute audio"}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
-              >
-                {soundEnabled ? <Volume2 className="w-4 h-4 text-blue-500" /> : <VolumeX className="w-4 h-4" />}
-              </button>
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  aria-label={soundEnabled ? "Mute audio" : "Unmute audio"}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                >
+                  {soundEnabled ? <Volume2 className="w-4.5 h-4.5 text-blue-500" /> : <VolumeX className="w-4.5 h-4.5" />}
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() => setShowNewChatModal(true)}
+                  aria-label="Start new chat"
+                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center transition cursor-pointer"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Search Input Box */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search chats or messages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-100/80 dark:bg-slate-800/80 border-none pl-10 pr-4 py-2.5 rounded-full text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500/50 transition"
+              />
+            </div>
+
+            {/* Filter Tabs (All / Unread / Pinned) */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl text-xs font-semibold text-slate-500">
               <button
                 type="button"
-                onClick={() => setShowNewChatModal(true)}
-                aria-label="Start new chat"
-                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center transition cursor-pointer"
+                onClick={() => setFilterTab('all')}
+                className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${filterTab === 'all' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'hover:text-slate-800 dark:hover:text-slate-200'}`}
               >
-                <Plus className="w-5 h-5" />
+                All ({chatList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('unread')}
+                className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${filterTab === 'unread' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'hover:text-slate-800 dark:hover:text-slate-200'}`}
+              >
+                Unread
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('pinned')}
+                className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${filterTab === 'pinned' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'hover:text-slate-800 dark:hover:text-slate-200'}`}
+              >
+                Pinned
               </button>
             </div>
           </div>
 
-          {/* Search Input Box */}
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search chats..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100/80 dark:bg-slate-800/80 border-none pl-10 pr-4 py-2.5 rounded-full text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500/50 transition"
-            />
-          </div>
-
-          {/* Filter Tabs (All / Unread / Pinned) */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl text-xs font-semibold text-slate-500">
-            <button
-              type="button"
-              onClick={() => setFilterTab('all')}
-              className={`flex-1 py-1 rounded-lg transition cursor-pointer ${filterTab === 'all' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'hover:text-slate-800 dark:hover:text-slate-200'}`}
-            >
-              All ({chatList.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterTab('unread')}
-              className={`flex-1 py-1 rounded-lg transition cursor-pointer flex items-center justify-center gap-1 ${filterTab === 'unread' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'hover:text-slate-800 dark:hover:text-slate-200'}`}
-            >
-              Unread
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterTab('pinned')}
-              className={`flex-1 py-1 rounded-lg transition cursor-pointer ${filterTab === 'pinned' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'hover:text-slate-800 dark:hover:text-slate-200'}`}
-            >
-              Pinned
-            </button>
-          </div>
-
-          {/* VIRTUALIZED WINDOWED CHAT STREAM (ZERO BROWSER FREEZE) */}
+          {/* VIRTUALIZED CHAT STREAM */}
           <div 
             ref={scrollContainerRef}
             onScroll={handleScroll}
             role="list" 
             aria-label="Chats stream" 
-            className="overflow-y-auto max-h-[420px] pr-0.5"
+            className="flex-1 overflow-y-auto max-h-[520px] pr-0.5"
           >
             {isLoadingFromDB ? (
-              <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
-                Loading chats from cache...
+              <div className="py-12 text-center text-xs text-slate-400 animate-pulse">
+                Loading conversations...
               </div>
             ) : filteredChats.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-slate-400">
                 No chats found
               </div>
             ) : (
-              <div style={{ paddingTop: `${virtualSlice.paddingTop}px`, paddingBottom: `${virtualSlice.paddingBottom}px` }} className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div style={{ paddingTop: `${virtualSlice.paddingTop}px`, paddingBottom: `${virtualSlice.paddingBottom}px` }} className="space-y-1">
                 {virtualSlice.items.map((chat) => (
                   <ChatRowItem
                     key={chat.id}
@@ -691,40 +870,45 @@ export function ChatListCard({
           </div>
         </div>
 
-        {/* Right Side: Active Messenger Thread */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between min-h-[500px] relative">
+        {/* Right Side: Active Messenger Thread Card */}
+        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between h-full relative">
           {selectedChat ? (
             <>
               {/* Header Bar */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 relative">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 relative shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-10 h-10" />
-                    {selectedChat.isOnline && <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />}
+                    <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-11 h-11" />
+                    {selectedChat.isOnline && <span className="w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />}
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{selectedChat.name}</h3>
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">{selectedChat.statusText || 'Active now'}</p>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                      {selectedChat.name}
+                      {selectedChat.isPinned && <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
+                    </h3>
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      {isTyping ? <span className="animate-pulse font-bold text-blue-500">Typing a reply...</span> : (selectedChat.statusText || 'Active now')}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1 text-slate-400" ref={contextMenuRef}>
-                  <button type="button" aria-label="Call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Phone className="w-4 h-4" /></button>
-                  <button type="button" aria-label="Video call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Video className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => showToast(`Calling ${selectedChat.name}... 📞`)} aria-label="Call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Phone className="w-4.5 h-4.5" /></button>
+                  <button type="button" onClick={() => showToast(`Starting video call with ${selectedChat.name}... 📹`)} aria-label="Video call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Video className="w-4.5 h-4.5" /></button>
 
-                  {/* THREE DOTS BUTTON */}
+                  {/* THREE DOTS CONTEXT MENU */}
                   <button 
                     type="button" 
                     onClick={() => setShowContextMenu(!showContextMenu)}
                     aria-label="More options" 
-                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition cursor-pointer"
+                    className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition cursor-pointer"
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <MoreHorizontal className="w-4.5 h-4.5" />
                   </button>
 
                   {/* CONTEXT MENU POPOVER */}
                   {showContextMenu && (
-                    <div className="absolute top-12 right-0 z-50 w-48 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute top-12 right-0 z-50 w-52 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-150">
                       <button
                         type="button"
                         onClick={handleViewProfile}
@@ -736,11 +920,20 @@ export function ChatListCard({
 
                       <button
                         type="button"
+                        onClick={handleTogglePinChat}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                      >
+                        {selectedChat.isPinned ? <PinOff className="w-4 h-4 text-amber-500 shrink-0" /> : <Pin className="w-4 h-4 text-slate-500 shrink-0" />}
+                        <span>{selectedChat.isPinned ? 'Unpin Conversation' : 'Pin Conversation'}</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={handleShareChat}
                         className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <Share2 className="w-4 h-4 text-slate-500 shrink-0" />
-                        <span>Share</span>
+                        <span>Share Chat Link</span>
                       </button>
 
                       <button
@@ -749,7 +942,7 @@ export function ChatListCard({
                         className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <Ban className="w-4 h-4 text-slate-500 shrink-0" />
-                        <span>Block</span>
+                        <span>Block User</span>
                       </button>
 
                       <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
@@ -760,33 +953,71 @@ export function ChatListCard({
                         className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
-                        <span>Delete</span>
+                        <span>Delete Chat</span>
                       </button>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Messages Stream (VIRTUALIZED) */}
+              {/* MESSAGES STREAM (VIRTUALIZED) */}
               <div
                 ref={msgScrollContainerRef}
                 onScroll={handleMsgScroll}
                 role="log"
                 aria-live="polite"
-                className="flex-1 overflow-y-auto py-4 max-h-[350px] pr-1"
+                className="flex-1 overflow-y-auto py-4 max-h-[460px] pr-1"
               >
-                <div style={{ paddingTop: `${msgVirtualSlice.paddingTop}px`, paddingBottom: `${msgVirtualSlice.paddingBottom}px` }} className="space-y-3">
+                <div style={{ paddingTop: `${msgVirtualSlice.paddingTop}px`, paddingBottom: `${msgVirtualSlice.paddingBottom}px` }} className="space-y-4">
                   {msgVirtualSlice.items.map(msg => (
-                    <MessageBubble key={msg.id} msg={msg} />
+                    <MessageBubble key={msg.id} msg={msg} onToggleReaction={handleToggleReaction} />
                   ))}
                 </div>
+                {isTyping && (
+                  <div className="flex items-center gap-2 text-xs text-slate-400 py-2 animate-pulse">
+                    <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-6 h-6" />
+                    <span>{selectedChat.name} is typing...</span>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Form */}
-              <form onSubmit={handleSendMessage} className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                <button type="button" aria-label="Attach file" className="p-2 text-slate-400 hover:text-slate-600 cursor-pointer"><Paperclip className="w-4 h-4" /></button>
-                <button type="button" aria-label="Add emoji" className="p-2 text-slate-400 hover:text-slate-600 cursor-pointer"><Smile className="w-4 h-4" /></button>
+              {/* DRAFT ATTACHMENT PREVIEW BAR */}
+              {draftAttachment && (
+                <div className="mb-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-between gap-2 border border-slate-200 dark:border-slate-700 animate-in fade-in">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {draftAttachment.type === 'image' ? (
+                      <img src={draftAttachment.url} alt="Draft" className="w-8 h-8 rounded-md object-cover" />
+                    ) : (
+                      <FileText className="w-5 h-5 text-blue-500 shrink-0" />
+                    )}
+                    <span className="text-xs text-slate-700 dark:text-slate-200 truncate font-medium">{draftAttachment.name}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0">({draftAttachment.size})</span>
+                  </div>
+                  <button type="button" onClick={() => setDraftAttachment(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Input Form with Attachment Picker */}
+              <form onSubmit={handleSendMessage} className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 shrink-0">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.txt"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Attach file"
+                  className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer"
+                >
+                  <Paperclip className="w-4.5 h-4.5" />
+                </button>
+
                 <input
                   type="text"
                   placeholder={`Message ${selectedChat.name}...`}
@@ -794,8 +1025,9 @@ export function ChatListCard({
                   onChange={(e) => setNewMessageText(e.target.value)}
                   className="flex-1 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 rounded-full text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
+
                 <button type="submit" aria-label="Send message" className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition shadow-xs cursor-pointer">
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-4 h-4" />
                 </button>
               </form>
             </>
