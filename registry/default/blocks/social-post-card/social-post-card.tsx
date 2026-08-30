@@ -4,10 +4,12 @@ import {
   MessageCircle, 
   Share2, 
   MoreHorizontal, 
+  Smile, 
   Edit3, 
   Copy, 
   Bookmark, 
   Flag, 
+  Trash2, 
   CornerDownRight, 
   Send,
   X,
@@ -16,23 +18,29 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
-  Play,
   Pause,
+  Play,
   Pin,
+  Share,
   Globe,
   Lock,
+  Tag,
   CheckCircle2,
+  Code2,
+  Search,
   Eye,
+  TrendingUp,
   Volume2,
   VolumeX,
+  BarChart3,
   Check
 } from 'lucide-react';
-import type { ReactionType, Comment, SocialPostProps } from './types';
+import type { ReactionType, Comment, SocialPostProps, PollData } from './types';
 import { REACTIONS } from './types';
 
-export type { ReactionType, Comment, SocialPostProps };
+export type { ReactionType, Comment, SocialPostProps, PollData };
 
-const COMMENT_ROW_HEIGHT = 72; // Height of each comment item in px for virtualization
+const COMMENT_ITEM_HEIGHT = 86; // Height of each comment row in px for 60 FPS virtualization
 
 /* ========================================================
    INSTANT MNC AVATAR SYSTEM (0ms Slow 3G Latency)
@@ -86,7 +94,7 @@ const AvatarWithFallback = React.memo(({ name, src, size = "w-10 h-10" }: { name
 AvatarWithFallback.displayName = 'AvatarWithFallback';
 
 /* ========================================================
-   AUDIO VOICE NOTE PLAYER
+   MEMOIZED VOICE PLAYER SUB-COMPONENT
 ======================================================== */
 const VoicePlayer = React.memo(({ 
   commentId, 
@@ -130,7 +138,77 @@ const VoicePlayer = React.memo(({
 VoicePlayer.displayName = 'VoicePlayer';
 
 /* ========================================================
-   SINGLE COMMENT ITEM SUB-COMPONENT
+   DEEP LOGIC FEATURE: INTERACTIVE POLL / SURVEY WIDGET
+======================================================== */
+const PollWidget = React.memo(({ 
+  poll, 
+  onVote 
+}: { 
+  poll: PollData; 
+  onVote: (optionId: string) => void; 
+}) => {
+  return (
+    <div className="my-4 p-4 bg-slate-50/90 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+          <BarChart3 className="w-4 h-4 text-blue-500" />
+          {poll.question}
+        </h4>
+        {poll.expiresIn && (
+          <span className="text-[10px] font-medium text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded-full">
+            {poll.expiresIn}
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        {poll.options.map(option => {
+          const isVoted = poll.userVotedOptionId === option.id;
+          const percentage = poll.totalVotes > 0 ? Math.round((option.votes / poll.totalVotes) * 100) : 0;
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onVote(option.id)}
+              className={`w-full relative overflow-hidden rounded-xl p-3 text-left transition border cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none ${
+                isVoted
+                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 font-bold'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 text-slate-800 dark:text-slate-200'
+              }`}
+            >
+              {/* Progress Fill Bar */}
+              <div 
+                className={`absolute left-0 top-0 bottom-0 transition-all duration-500 ${
+                  isVoted ? 'bg-blue-500/20 dark:bg-blue-500/30' : 'bg-slate-200/60 dark:bg-slate-700/50'
+                }`}
+                style={{ width: `${percentage}%` }}
+              />
+
+              <div className="relative z-10 flex items-center justify-between text-xs">
+                <span className="flex items-center gap-2 font-medium">
+                  {isVoted && <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 font-bold" />}
+                  {option.text}
+                </span>
+                <span className="font-mono font-bold text-[11px]">
+                  {percentage}% <span className="text-slate-400 font-normal">({option.votes})</span>
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="text-[11px] text-slate-400 text-right font-medium">
+        Total Votes: <span className="font-bold text-slate-700 dark:text-slate-300">{poll.totalVotes.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+});
+PollWidget.displayName = 'PollWidget';
+
+/* ========================================================
+   MEMOIZED COMMENT ROW SUB-COMPONENT
 ======================================================== */
 const CommentRow = React.memo(({ 
   comment, 
@@ -150,7 +228,7 @@ const CommentRow = React.memo(({
   onToggleReplies: (id: string) => void; 
 }) => {
   return (
-    <div className="space-y-2 group animate-in fade-in duration-300">
+    <div className="space-y-2 group animate-in fade-in duration-200">
       <div className="flex items-start gap-2.5">
         <AvatarWithFallback name={comment.author.name} src={comment.author.avatar} size="w-8 h-8" />
         <div className="flex-1 min-w-0">
@@ -167,7 +245,7 @@ const CommentRow = React.memo(({
                 )}
                 {comment.isPinned && (
                   <span className="text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
-                    <Pin className="w-2.5 h-2.5" /> Pinned
+                    <Pin className="w-2.5 h-2.5 fill-amber-500" /> Pinned
                   </span>
                 )}
               </div>
@@ -188,12 +266,10 @@ const CommentRow = React.memo(({
             )}
           </div>
 
-          {/* Controls */}
           <div className="flex items-center gap-3 text-[11px] mt-1 px-1.5">
             <button
               type="button"
               onClick={() => onLike(comment.id)}
-              aria-label={comment.isLiked ? "Unlike comment" : "Like comment"}
               className={`flex items-center gap-1 font-medium transition cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-md px-1 ${
                 comment.isLiked ? 'text-red-500 font-semibold' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
               }`}
@@ -205,7 +281,6 @@ const CommentRow = React.memo(({
             <button 
               type="button"
               onClick={() => onReply(comment.author.name)}
-              aria-label={`Reply to ${comment.author.name}`}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-md px-1"
             >
               <CornerDownRight className="w-3 h-3" />
@@ -223,7 +298,6 @@ const CommentRow = React.memo(({
             )}
           </div>
 
-          {/* Nested Replies */}
           {showReplies && comment.replies && (
             <div className="mt-2.5 pl-3 border-l-2 border-blue-500/30 dark:border-blue-500/20 space-y-2.5">
               {comment.replies.map(reply => (
@@ -248,53 +322,9 @@ const CommentRow = React.memo(({
 CommentRow.displayName = 'CommentRow';
 
 /* ========================================================
-   IndexedDB PERSISTENCE LAYER FOR SOCIAL POST CARD
-======================================================== */
-const IDB_NAME = 'SocialPostCardDB';
-const IDB_STORE = 'posts';
-const IDB_VERSION = 1;
-
-function openPostDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE);
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function idbSavePostState(key: string, data: any): Promise<void> {
-  return openPostDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).put(data, key);
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => { db.close(); reject(tx.error); };
-    });
-  });
-}
-
-function idbLoadPostState(key: string): Promise<any | null> {
-  return openPostDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get(key);
-      req.onsuccess = () => { db.close(); resolve(req.result || null); };
-      req.onerror = () => { db.close(); reject(req.error); };
-    });
-  });
-}
-
-/* ========================================================
-   MAIN MNC-GRADE HIGH-TRAFFIC SOCIAL POST CARD
+   MAIN MNC WORLD-GRADE SOCIAL POST CARD
 ======================================================== */
 export function SocialPostCard({
-  id = "post_1",
   author = {
     name: 'Ray Hammond',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -303,12 +333,23 @@ export function SocialPostCard({
   },
   timestamp = 'Thursday, Jun 31, 5:50 PM',
   privacy = 'public',
-  content = "I'm so glad to share with you guys some photos from my recent trip to New-York. This city looks amazing, the buildings, nature, people all are beautiful, I highly recommend visiting! What is your favorite place here? 🥰",
+  content = "I'm so glad to share with you guys some photos from my recent trip to New York. The architecture, nature, and energy of the city are incredible! What's your favorite spot in NYC or where would you love to visit next? 🥰",
   hashtags = ['#NewYorkCity', '#TravelDiaries', '#Wanderlust', '#Architecture'],
   images = [
     '/ny_skyscrapers.jpg',
     '/ny_skyline.jpg'
   ],
+  poll = {
+    id: 'p1',
+    question: 'Which NYC landmark should I visit next?',
+    options: [
+      { id: 'opt1', text: 'Central Park Sunset Walk', votes: 142 },
+      { id: 'opt2', text: 'Edge Observation Deck', votes: 218 },
+      { id: 'opt3', text: 'Brooklyn Bridge Photography', votes: 95 }
+    ],
+    totalVotes: 455,
+    expiresIn: '2 days left'
+  },
   initialLikes = 245,
   initialSharesCount = 12,
   initialViews = 3420,
@@ -321,7 +362,7 @@ export function SocialPostCard({
         badge: 'Top Fan'
       },
       timestamp: 'Today at 3:30 PM',
-      text: "Wow, those photos look amazing! I'm visiting New York next week. Can you recommend some top spots to visit? 🙏",
+      text: "Wow, those photos look amazing! I'm visiting NYC next week. Can you recommend some must-see locations? 🙏",
       likes: 9,
       isLiked: false,
       isPinned: true,
@@ -333,7 +374,7 @@ export function SocialPostCard({
             avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
           },
           timestamp: 'Today at 4:10 PM',
-          text: "Make sure to check out Central Park at sunset and the Edge observation deck in Hudson Yards! 🌆",
+          text: "Definitely check out Central Park at sunset and the Edge observation deck in Hudson Yards! 🌆",
           likes: 5
         }
       ]
@@ -345,7 +386,7 @@ export function SocialPostCard({
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
       },
       timestamp: 'Yesterday at 8:45 PM',
-      text: "Check out this quick voice note about the best Brooklyn pizza spots! 🍕",
+      text: "Here is a quick voice note about the best Brooklyn pizza spots! 🍕",
       likes: 14,
       isLiked: true,
       hasVoiceNote: true,
@@ -353,7 +394,7 @@ export function SocialPostCard({
     }
   ]
 }: SocialPostProps) {
-  // State management
+  // Post States
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>('love');
   const [likesCount, setLikesCount] = useState(initialLikes);
   const [sharesCount, setSharesCount] = useState(initialSharesCount);
@@ -361,83 +402,50 @@ export function SocialPostCard({
   const [isSaved, setIsSaved] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // UI Modals & Popovers
+  // Poll State
+  const [pollState, setPollState] = useState<PollData | undefined>(poll);
+
+  // Modals & Menu
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [postText, setPostText] = useState(content);
 
-  // AI Sentiment State
-  const [showAiInsights, setShowAiInsights] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  // Comments state
+  // Comments Stream Panel
   const [isCommentsOpen, setIsCommentsOpen] = useState(true);
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newCommentText, setNewCommentText] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [commentFilter, setCommentFilter] = useState<'all' | 'top' | 'pinned'>('all');
   const [showReplies, setShowReplies] = useState<{ [key: string]: boolean }>({ c1: true });
-
-  // Lightbox Modal state
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  // Audio voice note state
   const [isPlayingAudio, setIsPlayingAudio] = useState<{ [key: string]: boolean }>({});
 
-  // Virtualization state for Comments
+  // Lightbox Modal
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Debounced Comment Search & Virtualization
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [commentScrollTop, setCommentScrollTop] = useState(0);
   const commentScrollRef = useRef<HTMLDivElement>(null);
 
-  const menuRef = useRef<HTMLDivElement>(null);
-  const reactionRef = useRef<HTMLDivElement>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+  const reactionTimeoutRef = useRef<any>(null);
 
-  // IndexedDB Hydration on Mount (Progressive Load in < 20ms)
+  // Debounce search query effect
   useEffect(() => {
-    let cancelled = false;
-    idbLoadPostState(id)
-      .then(stored => {
-        if (cancelled || !stored) return;
-        if (stored.currentReaction !== undefined) setCurrentReaction(stored.currentReaction);
-        if (stored.likesCount !== undefined) setLikesCount(stored.likesCount);
-        if (stored.sharesCount !== undefined) setSharesCount(stored.sharesCount);
-        if (stored.isSaved !== undefined) setIsSaved(stored.isSaved);
-        if (stored.postText !== undefined) setPostText(stored.postText);
-        if (Array.isArray(stored.comments)) setComments(stored.comments);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [id]);
+    const handler = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-  // IndexedDB Auto-Persistence (500ms Debounce)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      idbSavePostState(id, {
-        currentReaction,
-        likesCount,
-        sharesCount,
-        isSaved,
-        postText,
-        comments
-      }).catch(() => {});
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [id, currentReaction, likesCount, sharesCount, isSaved, postText, comments]);
+  const showToast = useCallback((msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 2500);
+  }, []);
 
-  // Keyboard navigation for Lightbox Carousel
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (lightboxIndex === null) return;
-      if (e.key === 'Escape') setLightboxIndex(null);
-      if (e.key === 'ArrowRight') setLightboxIndex((lightboxIndex + 1) % images.length);
-      if (e.key === 'ArrowLeft') setLightboxIndex((lightboxIndex - 1 + images.length) % images.length);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxIndex, images.length]);
-
-  // Audio Haptic Synthesizer
-  const playHapticSound = useCallback((freq = 440) => {
+  // Web Audio Synthesizer
+  const playSoundEffect = useCallback((freq = 587.33) => {
     if (!soundEnabled) return;
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -445,534 +453,740 @@ export function SocialPostCard({
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.1);
+      osc.stop(ctx.currentTime + 0.15);
     } catch {}
   }, [soundEnabled]);
 
-  // Multi-Reaction Selector Handler
+  // Deep Logic 1: Optimistic Multi-Reaction Engine
   const handleSelectReaction = useCallback((type: ReactionType) => {
-    playHapticSound(660);
+    playSoundEffect(660);
+    setCurrentReaction(prev => {
+      if (prev === type) {
+        setLikesCount(l => l - 1);
+        return null;
+      }
+      if (!prev) setLikesCount(l => l + 1);
+      const reactionObj = REACTIONS.find(r => r.type === type);
+      showToast(`Reacted with ${reactionObj?.emoji || '❤️'}`);
+      return type;
+    });
     setShowReactionPicker(false);
-    if (currentReaction === type) {
-      setCurrentReaction(null);
-      setLikesCount(prev => Math.max(0, prev - 1));
-    } else {
-      if (!currentReaction) setLikesCount(prev => prev + 1);
-      setCurrentReaction(type);
-    }
-  }, [currentReaction, playHapticSound]);
+  }, [playSoundEffect, showToast]);
 
-  // Like Toggle
-  const handleToggleLike = useCallback(() => {
-    if (currentReaction) {
-      handleSelectReaction(currentReaction);
-    } else {
-      handleSelectReaction('like');
-    }
-  }, [currentReaction, handleSelectReaction]);
+  // Deep Logic 2: Interactive Poll Vote Handler
+  const handleVotePoll = useCallback((optionId: string) => {
+    if (!pollState) return;
+    playSoundEffect(880);
 
-  // Comment Addition Handler
-  const handleAddComment = (e: React.FormEvent) => {
+    setPollState(prev => {
+      if (!prev) return prev;
+      const currentVoted = prev.userVotedOptionId;
+      if (currentVoted === optionId) return prev; // Already voted for this option
+
+      const updatedOptions = prev.options.map(opt => {
+        if (opt.id === optionId) {
+          return { ...opt, votes: opt.votes + 1 };
+        }
+        if (opt.id === currentVoted) {
+          return { ...opt, votes: Math.max(0, opt.votes - 1) };
+        }
+        return opt;
+      });
+
+      const newTotal = currentVoted ? prev.totalVotes : prev.totalVotes + 1;
+      return {
+        ...prev,
+        options: updatedOptions,
+        totalVotes: newTotal,
+        userVotedOptionId: optionId
+      };
+    });
+
+    showToast('Vote submitted! 📊');
+  }, [pollState, playSoundEffect, showToast]);
+
+  const handleToggleSave = useCallback(() => {
+    playSoundEffect();
+    setIsSaved(prev => {
+      showToast(!prev ? 'Saved to bookmarks 🔖' : 'Removed from bookmarks');
+      return !prev;
+    });
+    setShowMenu(false);
+  }, [playSoundEffect, showToast]);
+
+  // Optimistic Comment Submission
+  const handleAddComment = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim()) return;
 
-    playHapticSound(550);
-
-    const newCommentObj: Comment = {
-      id: `c_${Date.now()}`,
+    playSoundEffect();
+    const newComment: Comment = {
+      id: Date.now().toString(),
       author: {
         name: 'You',
         avatar: '',
-        badge: 'Contributor'
+        badge: 'Author'
       },
       timestamp: 'Just now',
       text: newCommentText.trim(),
-      likes: 0,
-      isLiked: false
+      likes: 0
     };
 
-    setComments(prev => [newCommentObj, ...prev]);
+    setComments(prev => [newComment, ...prev]);
     setNewCommentText('');
-  };
+    setShowEmojiPicker(false);
+    showToast('Comment posted! 🚀');
+  }, [newCommentText, playSoundEffect, showToast]);
 
-  // Comment Like Handler
   const handleToggleCommentLike = useCallback((commentId: string) => {
-    playHapticSound(480);
+    playSoundEffect();
     setComments(prev => prev.map(c => {
       if (c.id === commentId) {
-        const isLiked = !c.isLiked;
-        return { ...c, isLiked, likes: isLiked ? c.likes + 1 : Math.max(0, c.likes - 1) };
+        const liked = !c.isLiked;
+        return {
+          ...c,
+          isLiked: liked,
+          likes: liked ? c.likes + 1 : c.likes - 1
+        };
       }
       return c;
     }));
-  }, [playHapticSound]);
+  }, [playSoundEffect]);
 
-  // Reply Trigger
-  const handleReplyToComment = (authorName: string) => {
+  const handleToggleVoicePlay = useCallback((id: string) => {
+    setIsPlayingAudio(prev => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  const handleToggleReplies = useCallback((id: string) => {
+    setShowReplies(prev => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  const handleReplyPrompt = useCallback((authorName: string) => {
     setNewCommentText(`@${authorName} `);
+    document.getElementById('side-comment-input')?.focus();
+  }, []);
+
+  // Filtered Comments List
+  const filteredComments = useMemo(() => {
+    const query = debouncedQuery.toLowerCase();
+    return comments.filter(c => {
+      if (commentFilter === 'pinned') return c.isPinned;
+      if (commentFilter === 'top') return c.likes >= 5;
+      if (query) return c.text.toLowerCase().includes(query) || c.author.name.toLowerCase().includes(query);
+      return true;
+    });
+  }, [comments, commentFilter, debouncedQuery]);
+
+  // Virtualized Windowing for Comments Stream (Supports 10,000 comments at 60 FPS)
+  const handleCommentScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setCommentScrollTop(e.currentTarget.scrollTop);
   };
 
-  // Filtered & Virtualized Comments
-  const filteredComments = useMemo(() => {
-    let list = [...comments];
-    if (commentFilter === 'top') {
-      list.sort((a, b) => b.likes - a.likes);
-    } else if (commentFilter === 'pinned') {
-      list = list.filter(c => c.isPinned);
-    }
-    return list;
-  }, [comments, commentFilter]);
-
-  const virtualComments = useMemo(() => {
+  const commentVirtualSlice = useMemo(() => {
     const totalCount = filteredComments.length;
     if (totalCount <= 20) {
       return { items: filteredComments, paddingTop: 0, paddingBottom: 0 };
     }
-    const containerHeight = 350;
-    const startIndex = Math.max(0, Math.floor(commentScrollTop / COMMENT_ROW_HEIGHT) - 3);
-    const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / COMMENT_ROW_HEIGHT) + 5);
+    const containerHeight = 460;
+    const startIndex = Math.max(0, Math.floor(commentScrollTop / COMMENT_ITEM_HEIGHT) - 3);
+    const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / COMMENT_ITEM_HEIGHT) + 6);
     return {
       items: filteredComments.slice(startIndex, endIndex),
-      paddingTop: startIndex * COMMENT_ROW_HEIGHT,
-      paddingBottom: (totalCount - endIndex) * COMMENT_ROW_HEIGHT
+      paddingTop: startIndex * COMMENT_ITEM_HEIGHT,
+      paddingBottom: (totalCount - endIndex) * COMMENT_ITEM_HEIGHT
     };
   }, [filteredComments, commentScrollTop]);
 
-  const activeReactionConfig = useMemo(() => {
-    return REACTIONS.find(r => r.type === currentReaction);
-  }, [currentReaction]);
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(`https://social.example.com/p/${id}`);
-    setCopiedLink(true);
-    playHapticSound(800);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
+  const activeReactionObj = useMemo(() => REACTIONS.find(r => r.type === currentReaction), [currentReaction]);
 
   return (
-    <article 
-      data-state={isCommentsOpen ? "expanded" : "collapsed"} 
-      className="w-full max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden font-sans transition-all duration-300"
-    >
-      {/* HEADER SECTION */}
-      <header className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80">
-        <div className="flex items-center gap-3.5">
-          <div className="relative">
-            <AvatarWithFallback name={author.name} src={author.avatar} size="w-11 h-11" />
-            <span className="w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="font-bold text-sm text-slate-900 dark:text-white hover:underline cursor-pointer">
-                {author.name}
-              </h2>
-              {author.verified && <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/10" />}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-red-500" /> {author.location}</span>
-              <span>•</span>
-              <span>{timestamp}</span>
-              <span>•</span>
-              {privacy === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-            </div>
-          </div>
-        </div>
-
-        {/* Header Controls */}
-        <div className="flex items-center gap-1 text-slate-400 relative" ref={menuRef}>
-          <button
-            type="button"
-            onClick={() => setShowAiInsights(!showAiInsights)}
-            aria-label="Toggle AI Insights"
-            title="Toggle AI Sentiment & Insights"
-            className={`p-2 rounded-full transition cursor-pointer ${showAiInsights ? 'bg-purple-100 dark:bg-purple-950 text-purple-600' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            aria-label={soundEnabled ? "Mute audio" : "Unmute audio"}
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4 text-blue-500" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowMenu(!showMenu)}
-            aria-label="More post options"
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
-
-          {/* Context Menu Dropdown */}
-          {showMenu && (
-            <div className="absolute top-11 right-0 z-40 w-48 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-1.5 animate-in fade-in zoom-in-95">
-              <button
-                type="button"
-                onClick={() => { setIsSaved(!isSaved); setShowMenu(false); playHapticSound(700); }}
-                className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
-              >
-                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-blue-500 text-blue-500' : ''}`} />
-                <span>{isSaved ? 'Saved to Bookmarks' : 'Bookmark Post'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => { handleCopyLink(); setShowMenu(false); }}
-                className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
-              >
-                <Copy className="w-4 h-4" />
-                <span>Copy Post Link</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => { setIsEditingPost(!isEditingPost); setShowMenu(false); }}
-                className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Edit Caption</span>
-              </button>
-              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-              <button
-                type="button"
-                onClick={() => setShowMenu(false)}
-                className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2.5 transition cursor-pointer"
-              >
-                <Flag className="w-4 h-4" />
-                <span>Report Post</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* AI INSIGHTS & SENTIMENT BANNER */}
-      {showAiInsights && (
-        <div className="bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-blue-500/10 p-3.5 border-b border-purple-500/20 flex items-center justify-between text-xs animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-600 animate-pulse" />
-            <span className="font-bold text-purple-900 dark:text-purple-200">AI Sentiment:</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">
-              Positive (98% Score)
-            </span>
-          </div>
-          <span className="text-[10px] text-slate-500 font-medium">Topic: Travel & Architecture</span>
+    <div className="w-full max-w-7xl mx-auto font-sans selection:bg-blue-500 selection:text-white relative">
+      
+      {/* Toast Notification Pill */}
+      {notification && (
+        <div 
+          role="status"
+          aria-live="polite"
+          className="fixed top-5 right-5 z-50 bg-slate-900/95 dark:bg-slate-100/95 text-white dark:text-slate-900 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2 animate-in fade-in backdrop-blur-md"
+        >
+          <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
+          {notification}
         </div>
       )}
 
-      {/* BODY CONTENT SECTION */}
-      <main className="p-5 space-y-4">
-        {/* Caption Text */}
-        {isEditingPost ? (
-          <div className="space-y-2">
-            <textarea
-              value={postText}
-              onChange={(e) => setPostText(e.target.value)}
-              className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-            />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setIsEditingPost(false)} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Cancel</button>
-              <button type="button" onClick={() => setIsEditingPost(false)} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs cursor-pointer">Save Edit</button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed break-words font-normal">
-            {postText}
-          </p>
-        )}
+      {/* Main 12-Column Responsive Layout */}
+      <div className={`grid grid-cols-1 ${isCommentsOpen ? 'lg:grid-cols-12' : 'max-w-3xl mx-auto'} gap-6 transition-all duration-500 ease-in-out`}>
+        
+        {/* LEFT COLUMN: Main Social Post Card */}
+        <article className={`${isCommentsOpen ? 'lg:col-span-7' : 'w-full'} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl transition-all relative text-slate-900 dark:text-slate-100 flex flex-col justify-between`}>
+          
+          <div>
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <AvatarWithFallback name={author.name} src={author.avatar} size="w-12 h-12" />
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Online" />
+                </div>
 
-        {/* Hashtags */}
-        {hashtags && hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {hashtags.map((tag) => (
-              <span key={tag} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight flex items-center gap-1">
+                      {author.name}
+                      {author.verified && <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/20" />}
+                    </h3>
+                    <span className="text-slate-400 text-xs font-normal">is at</span>
+                    <a href="#location" className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold hover:underline text-xs sm:text-sm bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-lg border border-blue-200/60 dark:border-blue-900/60 focus-visible:ring-2 focus-visible:ring-blue-500 outline-none">
+                      <MapPin className="w-3 h-3 text-blue-500" />
+                      {author.location}
+                    </a>
+                  </div>
 
-        {/* IMAGE GALLERY GRID */}
-        {images && images.length > 0 && (
-          <div className={`grid gap-2 rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-800 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            {images.map((img, idx) => (
-              <div 
-                key={idx} 
-                className="relative group cursor-pointer overflow-hidden aspect-video bg-slate-100 dark:bg-slate-800"
-                onClick={() => setLightboxIndex(idx)}
-              >
-                <img
-                  src={img}
-                  alt={`Post attachment ${idx + 1}`}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                  <span className="p-2 rounded-full bg-white/20 backdrop-blur-md text-white">
-                    <Maximize2 className="w-4 h-4" />
-                  </span>
+                  <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
+                    <span>{timestamp}</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 text-slate-400" title={privacy}>
+                      {privacy === 'public' && <Globe className="w-3 h-3" />}
+                      {privacy === 'friends' && <Tag className="w-3 h-3" />}
+                      {privacy === 'only_me' && <Lock className="w-3 h-3" />}
+                      <span className="capitalize">{privacy}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </main>
 
-      {/* METRICS & STATS BAR */}
-      <section className="px-5 py-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-medium">
-        <div className="flex items-center gap-1.5">
-          <div className="flex -space-x-1">
-            <span className="w-4.5 h-4.5 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">❤️</span>
-            <span className="w-4.5 h-4.5 rounded-full bg-blue-500 text-white text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">👍</span>
-            <span className="w-4.5 h-4.5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">🔥</span>
-          </div>
-          <span className="font-bold text-slate-700 dark:text-slate-200">{likesCount}</span>
-        </div>
-
-        <div className="flex items-center gap-4 text-[11px]">
-          <button type="button" onClick={() => setIsCommentsOpen(!isCommentsOpen)} className="hover:underline cursor-pointer">
-            {comments.length} comments
-          </button>
-          <span>•</span>
-          <span>{sharesCount} shares</span>
-          <span>•</span>
-          <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {viewsCount.toLocaleString()}</span>
-        </div>
-      </section>
-
-      {/* INTERACTIVE ACTION BUTTONS FOOTER */}
-      <footer className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between relative">
-        
-        {/* Reaction Popover & Button */}
-        <div className="relative flex-1" ref={reactionRef}>
-          {showReactionPicker && (
-            <div className="absolute -top-12 left-2 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-full px-2 py-1 flex items-center gap-1 animate-in fade-in zoom-in-95">
-              {REACTIONS.map((r) => (
+              {/* Sound Toggle & Options */}
+              <div className="flex items-center gap-1">
                 <button
-                  key={r.type}
                   type="button"
-                  onClick={() => handleSelectReaction(r.type)}
-                  aria-label={`React with ${r.label}`}
-                  className="hover:scale-125 transition text-base p-1 cursor-pointer"
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition focus-visible:ring-2 focus-visible:ring-blue-500 outline-none cursor-pointer"
+                  title={soundEnabled ? 'Sound enabled' : 'Sound muted'}
+                  aria-label="Toggle haptic audio effects"
                 >
-                  {r.emoji}
+                  {soundEnabled ? <Volume2 className="w-4.5 h-4.5 text-blue-500" /> : <VolumeX className="w-4.5 h-4.5" />}
                 </button>
-              ))}
-            </div>
-          )}
 
-          <button
-            type="button"
-            onClick={handleToggleLike}
-            onMouseEnter={() => setShowReactionPicker(true)}
-            aria-label="Like post"
-            className={`w-full py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold transition cursor-pointer ${
-              activeReactionConfig 
-                ? `${activeReactionConfig.color} ${activeReactionConfig.bg}` 
-                : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            {activeReactionConfig ? (
-              <>
-                <span className="text-sm">{activeReactionConfig.emoji}</span>
-                <span>{activeReactionConfig.label}</span>
-              </>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition focus-visible:ring-2 focus-visible:ring-blue-500 outline-none cursor-pointer"
+                    aria-label="More post options"
+                  >
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+
+                  {/* Options Dropdown */}
+                  {showMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                      <div className="absolute right-0 top-11 z-20 w-52 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 space-y-0.5 text-sm animate-in fade-in zoom-in-95">
+                        <button
+                          type="button"
+                          onClick={() => { setShowMenu(false); setIsEditingPost(true); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 transition text-xs font-medium cursor-pointer"
+                        >
+                          <Edit3 className="w-4 h-4 text-slate-400" />
+                          Edit post text
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowMenu(false); setShowShareModal(true); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 transition text-xs font-medium cursor-pointer"
+                        >
+                          <Copy className="w-4 h-4 text-slate-400" />
+                          Copy post link
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleToggleSave}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 transition text-xs font-medium cursor-pointer"
+                        >
+                          <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-amber-400 text-amber-500' : 'text-slate-400'}`} />
+                          {isSaved ? 'Saved in bookmarks' : 'Save post'}
+                        </button>
+                        <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                        <button
+                          type="button"
+                          onClick={() => { setShowMenu(false); showToast('Report submitted'); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/50 hover:text-amber-600 transition text-xs font-medium cursor-pointer"
+                        >
+                          <Flag className="w-4 h-4 text-amber-500" />
+                          Report post
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowMenu(false); showToast('Post deleted'); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition text-xs font-medium cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                          Delete post
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Post Content */}
+            {isEditingPost ? (
+              <div className="mb-4 space-y-3 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-blue-200 dark:border-blue-800">
+                <textarea
+                  value={postText}
+                  onChange={(e) => setPostText(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-medium"
+                  rows={3}
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingPost(false)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsEditingPost(false); showToast('Post updated!'); }}
+                    className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition shadow-xs cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
             ) : (
-              <>
-                <Heart className="w-4 h-4" />
-                <span>Like</span>
-              </>
+              <p className="text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-relaxed mb-3 font-normal">
+                {postText}
+              </p>
             )}
-          </button>
-        </div>
 
-        {/* Comment Toggle Button */}
-        <button
-          type="button"
-          onClick={() => setIsCommentsOpen(!isCommentsOpen)}
-          aria-label="Toggle comments"
-          className="flex-1 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span>Comment</span>
-        </button>
-
-        {/* Share Button */}
-        <button
-          type="button"
-          onClick={() => { setShowShareModal(true); setSharesCount(prev => prev + 1); }}
-          aria-label="Share post"
-          className="flex-1 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-        >
-          <Share2 className="w-4 h-4" />
-          <span>Share</span>
-        </button>
-
-        {/* Save Bookmark Button */}
-        <button
-          type="button"
-          onClick={() => { setIsSaved(!isSaved); playHapticSound(750); }}
-          aria-label={isSaved ? "Remove bookmark" : "Bookmark post"}
-          className={`p-2 rounded-xl transition cursor-pointer ${isSaved ? 'text-blue-600 bg-blue-50 dark:bg-blue-950' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-        >
-          <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-blue-600' : ''}`} />
-        </button>
-      </footer>
-
-      {/* COMMENTS STREAM PANEL (VIRTUALIZED) */}
-      {isCommentsOpen && (
-        <section className="p-5 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 space-y-4">
-          
-          {/* Comment Filters */}
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span className="text-slate-900 dark:text-white font-bold">Comments ({comments.length})</span>
-            <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
-              <button
-                type="button"
-                onClick={() => setCommentFilter('all')}
-                className={`px-2 py-0.5 rounded-md transition cursor-pointer ${commentFilter === 'all' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs font-bold' : ''}`}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setCommentFilter('top')}
-                className={`px-2 py-0.5 rounded-md transition cursor-pointer ${commentFilter === 'top' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs font-bold' : ''}`}
-              >
-                Top Liked
-              </button>
-            </div>
-          </div>
-
-          {/* New Comment Input Form */}
-          <form onSubmit={handleAddComment} className="flex items-center gap-2">
-            <AvatarWithFallback name="You" src="" size="w-8 h-8" />
-            <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-1.5 flex items-center gap-2 focus-within:ring-2 focus-within:ring-blue-500/50">
-              <input
-                type="text"
-                placeholder="Write a comment..."
-                value={newCommentText}
-                onChange={(e) => setNewCommentText(e.target.value)}
-                className="flex-1 bg-transparent border-none text-xs text-slate-900 dark:text-white outline-none placeholder-slate-400"
-              />
-              <button type="submit" aria-label="Submit comment" className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition cursor-pointer shrink-0">
-                <Send className="w-3 h-3" />
-              </button>
-            </div>
-          </form>
-
-          {/* Comment List Stream (Virtual Windowing for 10,000 items) */}
-          <div 
-            ref={commentScrollRef}
-            onScroll={(e) => setCommentScrollTop(e.currentTarget.scrollTop)}
-            className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1"
-          >
-            {filteredComments.length === 0 ? (
-              <div className="py-6 text-center text-xs text-slate-400">No comments found</div>
-            ) : (
-              <div style={{ paddingTop: `${virtualComments.paddingTop}px`, paddingBottom: `${virtualComments.paddingBottom}px` }} className="space-y-3.5">
-                {virtualComments.items.map(comment => (
-                  <CommentRow
-                    key={comment.id}
-                    comment={comment}
-                    onLike={handleToggleCommentLike}
-                    onReply={handleReplyToComment}
-                    isPlayingAudio={!!isPlayingAudio[comment.id]}
-                    onToggleVoice={(id) => setIsPlayingAudio(prev => ({ ...prev, [id]: !prev[id] }))}
-                    showReplies={!!showReplies[comment.id]}
-                    onToggleReplies={(id) => setShowReplies(prev => ({ ...prev, [id]: !prev[id] }))}
-                  />
+            {/* Hashtags Chips */}
+            {hashtags && hashtags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mb-4">
+                {hashtags.map((tag, idx) => (
+                  <span 
+                    key={idx} 
+                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2.5 py-1 rounded-lg cursor-pointer transition border border-blue-200/40 dark:border-blue-900/40"
+                  >
+                    {tag}
+                  </span>
                 ))}
               </div>
             )}
+
+            {/* DEEP LOGIC FEATURE: REAL-TIME INTERACTIVE POLL WIDGET */}
+            {pollState && <PollWidget poll={pollState} onVote={handleVotePoll} />}
+
+            {/* Media Gallery (0 CLS Aspect-Ratio Locked Grid) */}
+            {images && images.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 rounded-2xl overflow-hidden relative group">
+                {images.map((img, index) => (
+                  <div 
+                    key={index} 
+                    className="relative group/img cursor-pointer overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800 aspect-video sm:aspect-[4/3]"
+                    onClick={() => setLightboxIndex(index)}
+                  >
+                    <img
+                      src={img}
+                      alt={`Post photo media ${index + 1}`}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover transition duration-500 group-hover/img:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition duration-300 flex items-end justify-between p-4">
+                      <span className="text-white text-xs font-medium flex items-center gap-1 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
+                        <Maximize2 className="w-3.5 h-3.5" /> Fullscreen
+                      </span>
+                      <span className="text-white/90 text-[11px] font-mono bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
+                        Photo {index + 1} of {images.length}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Analytics Summary */}
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4 pt-1 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-medium">
+                  <Eye className="w-3.5 h-3.5 text-blue-500" />
+                  {viewsCount.toLocaleString()} Views
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  98.4% Engagement
+                </span>
+              </div>
+
+              {isSaved && (
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                  <Bookmark className="w-3.5 h-3.5 fill-amber-500" /> Saved
+                </span>
+              )}
+            </div>
+
+            {/* Reaction Counts Summary */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex -space-x-2 overflow-hidden">
+                  <span className="inline-flex items-center justify-center h-6.5 w-6.5 rounded-full bg-rose-500 text-white ring-2 ring-white dark:ring-slate-900 text-xs shadow-xs">❤️</span>
+                  <span className="inline-flex items-center justify-center h-6.5 w-6.5 rounded-full bg-amber-500 text-white ring-2 ring-white dark:ring-slate-900 text-xs shadow-xs">🔥</span>
+                  <span className="inline-flex items-center justify-center h-6.5 w-6.5 rounded-full bg-blue-500 text-white ring-2 ring-white dark:ring-slate-900 text-xs shadow-xs">👍</span>
+                </div>
+                <span className="text-slate-700 dark:text-slate-200 text-xs font-semibold">
+                  {activeReactionObj ? `${activeReactionObj.emoji} You and ${likesCount - 1} others` : `${likesCount} Reactions`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
+                <button 
+                  type="button"
+                  onClick={() => setIsCommentsOpen(!isCommentsOpen)} 
+                  className="hover:text-blue-500 transition cursor-pointer underline-offset-4 hover:underline font-semibold"
+                >
+                  {comments.length} Comments
+                </button>
+                <span>•</span>
+                <span>{sharesCount} Shares</span>
+              </div>
+            </div>
           </div>
-        </section>
+
+          {/* Action Buttons Bar */}
+          <div className="relative border-t border-b border-slate-100 dark:border-slate-800/80 py-2 mt-auto flex items-center justify-between text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">
+            
+            {/* Reaction Popover */}
+            {showReactionPicker && (
+              <div 
+                className="absolute bottom-12 left-2 z-30 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-full shadow-2xl px-3 py-2 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2"
+                onMouseEnter={() => clearTimeout(reactionTimeoutRef.current)}
+                onMouseLeave={() => setShowReactionPicker(false)}
+              >
+                {REACTIONS.map((r) => (
+                  <button
+                    key={r.type}
+                    type="button"
+                    onClick={() => handleSelectReaction(r.type)}
+                    className="text-xl sm:text-2xl hover:scale-130 transition duration-200 transform hover:-translate-y-1 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    title={r.label}
+                  >
+                    {r.emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Like Trigger */}
+            <div
+              className="relative flex-1"
+              onMouseEnter={() => {
+                reactionTimeoutRef.current = setTimeout(() => setShowReactionPicker(true), 250);
+              }}
+              onMouseLeave={() => clearTimeout(reactionTimeoutRef.current)}
+            >
+              <button
+                type="button"
+                onClick={() => handleSelectReaction(currentReaction || 'love')}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none ${
+                  activeReactionObj ? `${activeReactionObj.color} font-bold ${activeReactionObj.bg}` : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {activeReactionObj ? (
+                  <span className="text-base">{activeReactionObj.emoji}</span>
+                ) : (
+                  <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+                <span>{activeReactionObj ? activeReactionObj.label : 'Like'}</span>
+              </button>
+            </div>
+
+            {/* Comments Drawer Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsCommentsOpen(!isCommentsOpen)}
+              className={`flex items-center justify-center gap-2 flex-1 py-2.5 rounded-xl transition cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none ${
+                isCommentsOpen 
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 font-bold' 
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Comments ({comments.length})</span>
+            </button>
+
+            {/* Share Trigger */}
+            <button
+              type="button"
+              onClick={() => setShowShareModal(true)}
+              className="flex items-center justify-center gap-2 flex-1 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition hover:text-slate-900 dark:hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+            >
+              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Share</span>
+            </button>
+          </div>
+
+        </article>
+
+        {/* RIGHT COLUMN: Virtualized Discussion Stream Panel */}
+        {isCommentsOpen && (
+          <aside className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl transition-all duration-300 flex flex-col h-full relative">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800 mb-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Discussion Stream <span className="text-xs font-mono font-normal text-slate-400">({comments.length})</span>
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCommentsOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                title="Close discussion panel"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Filter Tabs */}
+            <div className="space-y-3 mb-4 shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Filter discussion comments..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-100/80 dark:bg-slate-800/80 pl-9 pr-4 py-2 rounded-xl text-xs border-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCommentFilter('all')}
+                  className={`flex-1 py-1 rounded-lg font-semibold transition text-center cursor-pointer ${commentFilter === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  All ({comments.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCommentFilter('top')}
+                  className={`flex-1 py-1 rounded-lg font-semibold transition text-center cursor-pointer ${commentFilter === 'top' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Top Liked
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCommentFilter('pinned')}
+                  className={`flex-1 py-1 rounded-lg font-semibold transition text-center cursor-pointer ${commentFilter === 'pinned' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Pinned
+                </button>
+              </div>
+            </div>
+
+            {/* VIRTUALIZED COMMENTS STREAM (Supports 10,000 comments at 60 FPS) */}
+            <div 
+              ref={commentScrollRef}
+              onScroll={handleCommentScroll}
+              role="log"
+              aria-live="polite"
+              className="flex-1 overflow-y-auto max-h-[460px] pr-1 space-y-4"
+            >
+              {filteredComments.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 space-y-2">
+                  <MessageCircle className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
+                  <p className="text-xs font-medium">No comments match your filter</p>
+                </div>
+              ) : (
+                <div style={{ paddingTop: `${commentVirtualSlice.paddingTop}px`, paddingBottom: `${commentVirtualSlice.paddingBottom}px` }} className="space-y-4">
+                  {commentVirtualSlice.items.map((comment) => (
+                    <CommentRow 
+                      key={comment.id} 
+                      comment={comment} 
+                      onLike={handleToggleCommentLike} 
+                      onReply={handleReplyPrompt} 
+                      isPlayingAudio={!!isPlayingAudio[comment.id]} 
+                      onToggleVoice={handleToggleVoicePlay} 
+                      showReplies={!!showReplies[comment.id]} 
+                      onToggleReplies={handleToggleReplies} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Comment Composer Input */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-auto shrink-0">
+              <form onSubmit={handleAddComment} className="flex items-center gap-2">
+                <AvatarWithFallback name="You" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80" size="w-8 h-8" />
+
+                <div className="flex-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full px-3.5 py-2 flex items-center gap-1.5 focus-within:ring-2 focus-within:ring-blue-500/40 transition">
+                  <input
+                    id="side-comment-input"
+                    type="text"
+                    placeholder="Write a comment..."
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    className="w-full bg-transparent border-none text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none font-medium"
+                  />
+
+                  <div className="flex items-center gap-0.5 text-slate-400">
+                    <button 
+                      type="button" 
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="hover:text-slate-600 dark:hover:text-slate-200 transition p-1 cursor-pointer"
+                      title="Add emoji"
+                    >
+                      <Smile className="w-3.5 h-3.5 text-amber-500" />
+                    </button>
+                    {newCommentText.trim() && (
+                      <button 
+                        type="submit" 
+                        className="p-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition ml-0.5 cursor-pointer shadow-xs"
+                      >
+                        <Send className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </form>
+
+              {showEmojiPicker && (
+                <div className="flex items-center gap-1.5 pl-10 pt-2 animate-in fade-in">
+                  {['❤️', '😍', '🔥', '👏', '🗽', '✨', '🙌', '💯'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setNewCommentText(prev => prev + emoji)}
+                      className="text-base hover:scale-125 transition p-0.5 cursor-pointer"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </aside>
+        )}
+
+      </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Share className="w-5 h-5 text-blue-500" />
+                Share Post
+              </h3>
+              <button type="button" onClick={() => setShowShareModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 py-2 text-center">
+              {[
+                { name: 'Copy Link', icon: Copy, bg: 'bg-blue-50 text-blue-600', action: () => { navigator.clipboard.writeText(window.location.href); setSharesCount(prev => prev + 1); showToast('Link copied!'); setShowShareModal(false); } },
+                { name: 'Twitter/X', icon: Share2, bg: 'bg-sky-50 text-sky-600', action: () => { showToast('Redirecting to X...'); setShowShareModal(false); } },
+                { name: 'WhatsApp', icon: MessageCircle, bg: 'bg-emerald-50 text-emerald-600', action: () => { showToast('Opening WhatsApp...'); setShowShareModal(false); } },
+                { name: 'Embed', icon: Code2, bg: 'bg-purple-50 text-purple-600', action: () => { showToast('Embed code copied!'); setShowShareModal(false); } }
+              ].map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={item.action}
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    <div className={`p-3 rounded-2xl ${item.bg}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* FULL-SCREEN IMAGE LIGHTBOX MODAL */}
-      {lightboxIndex !== null && images && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+      {/* Lightbox Gallery Modal */}
+      {lightboxIndex !== null && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setLightboxIndex(null)}
+        >
           <button
             type="button"
             onClick={() => setLightboxIndex(null)}
-            aria-label="Close image lightbox"
-            className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
+            className="absolute top-5 right-5 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition z-50 cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setLightboxIndex((lightboxIndex - 1 + images.length) % images.length)}
-            aria-label="Previous image"
-            className="absolute left-5 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((lightboxIndex - 1 + images.length) % images.length);
+                }}
+                className="absolute left-5 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition z-50 cursor-pointer"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((lightboxIndex + 1) % images.length);
+                }}
+                className="absolute right-5 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition z-50 cursor-pointer"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+
+          <div 
+            className="relative max-w-5xl max-h-[85vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
           >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-
-          <div className="max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl flex flex-col items-center">
-            <img src={images[lightboxIndex]} alt="Enlarged preview" className="max-h-[75vh] w-auto object-contain rounded-xl shadow-2xl" />
-            <div className="mt-3 text-xs text-slate-400 font-medium flex items-center gap-3">
-              <span>{lightboxIndex + 1} of {images.length}</span>
-              <span>•</span>
-              <a href={images[lightboxIndex]} download className="text-blue-400 hover:underline">Download Original</a>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setLightboxIndex((lightboxIndex + 1) % images.length)}
-            aria-label="Next image"
-            className="absolute right-5 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        </div>
-      )}
-
-      {/* SHARE MODAL */}
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                <Share2 className="w-4 h-4 text-blue-500" /> Share Post
-              </h3>
-              <button type="button" onClick={() => setShowShareModal(false)} className="cursor-pointer"><X className="w-4 h-4 text-slate-400" /></button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-between gap-2">
-                <span className="text-xs text-slate-600 dark:text-slate-300 truncate font-mono">https://social.example.com/p/{id}</span>
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shrink-0 transition cursor-pointer flex items-center gap-1"
-                >
-                  {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedLink ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
-                <button type="button" onClick={() => { handleCopyLink(); setShowShareModal(false); }} className="p-3 bg-blue-50 dark:bg-blue-950 text-blue-600 rounded-2xl hover:bg-blue-100 cursor-pointer">Twitter</button>
-                <button type="button" onClick={() => { handleCopyLink(); setShowShareModal(false); }} className="p-3 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 rounded-2xl hover:bg-emerald-100 cursor-pointer">WhatsApp</button>
-                <button type="button" onClick={() => { handleCopyLink(); setShowShareModal(false); }} className="p-3 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 rounded-2xl hover:bg-indigo-100 cursor-pointer">LinkedIn</button>
-              </div>
+            <img
+              src={images[lightboxIndex]}
+              alt={`Full view ${lightboxIndex + 1}`}
+              className="max-h-[80vh] w-auto object-contain rounded-2xl"
+            />
+            <div className="mt-3 px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-mono">
+              Photo {lightboxIndex + 1} of {images.length}
             </div>
           </div>
         </div>
       )}
-    </article>
+
+    </div>
   );
 }

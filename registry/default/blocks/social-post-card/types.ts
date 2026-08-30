@@ -17,6 +17,21 @@ export const REACTIONS: ReactionConfig[] = [
   { type: 'sad', label: 'Sad', emoji: '😢', color: 'text-sky-500', bg: 'bg-sky-50 dark:bg-sky-950/50' },
 ];
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
+
+export interface PollData {
+  id: string;
+  question: string;
+  options: PollOption[];
+  totalVotes: number;
+  userVotedOptionId?: string;
+  expiresIn?: string;
+}
+
 export interface Comment {
   id: string;
   author: {
@@ -35,7 +50,6 @@ export interface Comment {
 }
 
 export interface SocialPostProps {
-  id?: string;
   author?: {
     name: string;
     avatar: string;
@@ -47,13 +61,9 @@ export interface SocialPostProps {
   content?: string;
   hashtags?: string[];
   images?: string[];
+  poll?: PollData;
   initialLikes?: number;
   initialSharesCount?: number;
   initialViews?: number;
   initialComments?: Comment[];
-  isSaved?: boolean;
-  sentiment?: {
-    label: string;
-    score: number;
-  };
 }
