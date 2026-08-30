@@ -30,8 +30,6 @@ import {
   Lock,
   CheckCircle,
   MoreHorizontal,
-  Wand2,
-  Leaf,
   Layers,
   Award
 } from 'lucide-react';
@@ -51,7 +49,7 @@ import type {
   ServerRole 
 } from './types';
 
-export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, SubscriptionTier, ProfileTab, ProfileContext };
+export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, SubscriptionTier, ProfileTab, ProfileContext, ServerRole };
 
 /* ========================================================
    INDEXEDDB AUTO-PERSISTENCE ENGINE FOR PROFILE & SUBSCRIPTION
