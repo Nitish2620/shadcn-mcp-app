@@ -20,6 +20,17 @@ export const registryComponents: RegistryItem[] = [
     ]
   },
   {
+    name: 'chat-list-card',
+    type: 'registry:block',
+    title: 'Chat List Card',
+    description: 'MNC-grade chat inbox card with online indicators, search filter, unread count badges, new chat modal, and live messenger stream panel.',
+    dependencies: ['lucide-react', 'clsx', 'tailwind-merge'],
+    files: [
+      'registry/default/blocks/chat-list-card/chat-list-card.tsx',
+      'registry/default/blocks/chat-list-card/types.ts'
+    ]
+  },
+  {
     name: 'pricing-table',
     type: 'registry:block',
     title: 'Pricing Table',

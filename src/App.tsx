@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SocialPostCard } from '../registry/default/blocks/social-post-card/social-post-card';
+import { ChatListCard } from '../registry/default/blocks/chat-list-card/chat-list-card';
 import { PricingTable } from '../registry/default/blocks/pricing-table/pricing-table';
 import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, ShieldCheck, Key, Lock, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid } from 'lucide-react';
 
@@ -15,6 +16,16 @@ interface ComponentItem {
 }
 
 const CATALOG_COMPONENTS: ComponentItem[] = [
+  {
+    id: 'chat-list-card',
+    name: 'chat-list-card',
+    title: 'Chat List Card',
+    description: 'MNC-grade chat inbox card with online indicators, search filter, unread count badges, new chat modal, and live messenger stream panel.',
+    category: 'Messaging & Chat',
+    badge: 'New Featured',
+    dependencies: ['lucide-react', 'clsx', 'tailwind-merge'],
+    installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/chat-list-card.json"'
+  },
   {
     id: 'social-post-card',
     name: 'social-post-card',
@@ -39,7 +50,7 @@ const CATALOG_COMPONENTS: ComponentItem[] = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'preview' | 'catalog' | 'code' | 'registry' | 'monetization'>('preview');
-  const [activeComponent, setActiveComponent] = useState<'social-post-card' | 'pricing-table'>('social-post-card');
+  const [activeComponent, setActiveComponent] = useState<'chat-list-card' | 'social-post-card' | 'pricing-table'>('chat-list-card');
   const [darkMode, setDarkMode] = useState(false);
   const [userToken] = useState('pro_sub_sk_9482710394857210');
   const [copiedToken, setCopiedToken] = useState(false);
@@ -67,45 +78,30 @@ export default function App() {
     setTimeout(() => setCopiedToken(false), 2000);
   };
 
-  const componentUsageCode = `import { SocialPostCard } from '@/components/social/SocialPostCard';
+  const componentUsageCode = `import { ChatListCard } from '@/components/blocks/chat-list-card/chat-list-card';
 
-export default function FeedPage() {
+export default function InboxPage() {
   return (
-    <SocialPostCard
-      author={{
-        name: "Ray Hammond",
-        avatar: "/avatars/ray.jpg",
-        location: "New-York",
-        verified: true
-      }}
-      timestamp="Thursday, Jun 31, 5:50 PM"
-      content="I'm so glad to share with you guys some photos from my recent trip to New-York..."
-      hashtags={["#NewYorkCity", "#TravelDiaries", "#Wanderlust", "#Architecture"]}
-      images={[
-        "/ny_skyscrapers.jpg",
-        "/ny_skyline.jpg"
-      ]}
-      initialLikes={245}
-      initialCommentsCount={8}
-      initialSharesCount={12}
+    <ChatListCard
+      title="Chats"
     />
   );
 }`;
 
   const registryJson = `{
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
-  "name": "social-post-card",
-  "type": "registry:component",
-  "title": "Social Post Card Component",
-  "description": "Premium social media post card with reaction bar (Love, Fire, Haha, etc.), media lightbox, audio voice notes player, context menu, and nested comment tree.",
+  "name": "chat-list-card",
+  "type": "registry:block",
+  "title": "Chat List Card",
+  "description": "MNC-grade chat inbox card with online indicators, search filter, unread count badges, new chat modal, and live messenger stream panel.",
   "dependencies": ["lucide-react", "clsx", "tailwind-merge"],
   "files": [
     {
-      "path": "src/components/social/SocialPostCard.tsx",
+      "path": "registry/default/blocks/chat-list-card/chat-list-card.tsx",
       "type": "registry:component"
     },
     {
-      "path": "src/components/social/types.ts",
+      "path": "registry/default/blocks/chat-list-card/types.ts",
       "type": "registry:lib"
     }
   ]
@@ -229,10 +225,20 @@ export default function FeedPage() {
               <div className="flex items-center gap-2.5 text-blue-900 dark:text-blue-200 font-medium">
                 <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
-                  Organized Repository Structure active! Switch component preview below:
+                  Official <code className="font-mono bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">shadcn/ui</code> Monorepo Structure. Switch component preview below:
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setActiveComponent('chat-list-card')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'chat-list-card' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Chats List Card
+                </button>
                 <button
                   onClick={() => setActiveComponent('social-post-card')}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
@@ -258,7 +264,13 @@ export default function FeedPage() {
 
             {/* Live Component Render */}
             <div className="py-2">
-              {activeComponent === 'social-post-card' ? <SocialPostCard /> : <PricingTable />}
+              {activeComponent === 'chat-list-card' ? (
+                <ChatListCard />
+              ) : activeComponent === 'social-post-card' ? (
+                <SocialPostCard />
+              ) : (
+                <PricingTable />
+              )}
             </div>
           </div>
         )}
@@ -350,10 +362,10 @@ export default function FeedPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold">Usage in React</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Import and use <code className="font-mono text-blue-600">SocialPostCard</code> anywhere in your app</p>
+                <p className="text-xs text-slate-500 mt-0.5">Import and use <code className="font-mono text-blue-600">ChatListCard</code> anywhere in your app</p>
               </div>
               <span className="px-2.5 py-1 rounded-full text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                src/components/social/SocialPostCard.tsx
+                registry/default/blocks/chat-list-card/chat-list-card.tsx
               </span>
             </div>
             
