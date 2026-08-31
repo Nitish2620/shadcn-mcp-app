@@ -1,14 +1,12 @@
 export type SubscriptionTier = 'free' | 'nitro_basic' | 'nitro_pro';
 
-export type AppTheme = 
-  | 'midnight_purple' 
-  | 'synthwave_cyan' 
-  | 'crimson_red' 
-  | 'solar_amber' 
-  | 'emerald_matrix' 
-  | 'sakura_pink';
-
-export type StreamQuality = '480p' | '720p_60fps' | '1080p_60fps' | '4k_source';
+export type ChatTheme = 
+  | 'default'
+  | 'synthwave_neon'
+  | 'cyber_emerald'
+  | 'solar_gold'
+  | 'midnight_obsidian'
+  | 'sakura_dream';
 
 export type AvatarDecoration = 
   | 'none' 
@@ -24,7 +22,6 @@ export interface MessageReaction {
   count: number;
   users: string[];
   isSuperReaction?: boolean;
-  superReactionType?: 'hype' | 'fire' | 'heart' | 'matrix' | 'sakura';
 }
 
 export interface MessageAttachment {
@@ -34,6 +31,12 @@ export interface MessageAttachment {
   size?: string;
   soundFreq?: number;
   soundEmoji?: string;
+}
+
+export interface ReplyQuote {
+  id: string;
+  senderName: string;
+  text: string;
 }
 
 export interface Message {
@@ -51,6 +54,9 @@ export interface Message {
   attachment?: MessageAttachment;
   isNitroSticker?: boolean;
   isNitroSoundboard?: boolean;
+  replyTo?: ReplyQuote;
+  isPinned?: boolean;
+  isEdited?: boolean;
 }
 
 export interface ChatItem {
@@ -72,7 +78,6 @@ export interface ChatListCardProps {
   title?: string;
   chats?: ChatItem[];
   initialSubscriptionTier?: SubscriptionTier;
-  initialTheme?: AppTheme;
   onSelectChat?: (chat: ChatItem) => void;
   onNewChat?: () => void;
 }
