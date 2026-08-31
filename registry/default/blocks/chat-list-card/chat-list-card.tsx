@@ -1,36 +1,21 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
-  Plus, 
   Send, 
-  Phone, 
-  Video, 
-  MoreHorizontal, 
   Pin, 
-  CheckCheck, 
   X, 
   Paperclip, 
   Sparkles,
   Volume2,
   VolumeX,
   Crown,
-  Zap,
-  Flame,
-  Diamond,
-  Upload,
-  Lock,
   SmilePlus,
   Music,
-  Heart,
-  MessageSquare,
-  Share2,
-  FileText,
-  ShieldCheck,
-  Check
+  FileText
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -683,6 +668,29 @@ export function ChatListCard({
                           </button>
                         ))}
                       </div>
+                      <div className="pt-2 border-t border-slate-800">
+                        <div className="text-[10px] font-bold text-slate-400 mb-1">Animated Nitro Stickers</div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {NITRO_ANIMATED_STICKERS.map((stk) => (
+                            <button
+                              key={stk.id}
+                              type="button"
+                              onClick={() => {
+                                if (!isNitroPro) {
+                                  showToast('🔒 Animated Stickers require Nitro Pro ($9.99/mo)');
+                                  setIsSubscriptionModalOpen(true);
+                                  return;
+                                }
+                                handleSendMessage(`Posted Sticker: ${stk.emoji} ${stk.name}`);
+                                showToast(`Posted Sticker ${stk.name}`);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-slate-800 text-xs font-bold text-purple-300 flex items-center justify-center cursor-pointer border border-purple-500/20"
+                            >
+                              <span>{stk.emoji}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </Popover.Content>
                   </Popover.Portal>
                 </Popover.Root>
@@ -708,7 +716,15 @@ export function ChatListCard({
                             onClick={() => handleSendSoundboardClip(sound)}
                             className="w-full p-2 rounded-xl hover:bg-slate-800 text-xs font-bold text-slate-200 flex items-center justify-between transition cursor-pointer"
                           >
-                            <span>{sound.emoji} {sound.name}</span>
+                            <span className="flex items-center gap-1.5">
+                              <span>{sound.emoji} {sound.name}</span>
+                              {playingSoundId === sound.id && (
+                                <span className="flex items-center gap-0.5 text-amber-400 animate-pulse">
+                                  <span className="w-1 h-3 bg-amber-400 rounded-full animate-bounce" />
+                                  <span className="w-1 h-2 bg-amber-400 rounded-full animate-bounce delay-100" />
+                                </span>
+                              )}
+                            </span>
                             <Volume2 className="w-3.5 h-3.5 text-purple-400" />
                           </button>
                         ))}
