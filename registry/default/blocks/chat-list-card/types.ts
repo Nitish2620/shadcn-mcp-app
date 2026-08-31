@@ -1,5 +1,13 @@
 export type SubscriptionTier = 'free' | 'nitro_basic' | 'nitro_pro';
 
+export type AppTheme = 
+  | 'midnight_purple' 
+  | 'synthwave_neon' 
+  | 'cyber_emerald' 
+  | 'solar_gold' 
+  | 'rose_sakura' 
+  | 'dark_obsidian';
+
 export type AvatarDecoration = 
   | 'none' 
   | 'anime_power_aura' 
@@ -33,6 +41,12 @@ export interface LinkPreview {
   thumbnail?: string;
 }
 
+export interface MessageReply {
+  id: string;
+  senderName: string;
+  text: string;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -47,6 +61,7 @@ export interface Message {
   reactions?: MessageReaction[];
   attachment?: MessageAttachment;
   linkPreview?: LinkPreview;
+  replyTo?: MessageReply;
   isNitroSticker?: boolean;
   isNitroSoundboard?: boolean;
   isPinned?: boolean;
@@ -73,6 +88,7 @@ export interface ChatListCardProps {
   title?: string;
   chats?: ChatItem[];
   initialSubscriptionTier?: SubscriptionTier;
+  initialTheme?: AppTheme;
   onSelectChat?: (chat: ChatItem) => void;
   onNewChat?: () => void;
 }

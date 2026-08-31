@@ -21,7 +21,14 @@ import {
   CheckCheck,
   Clock,
   Hash,
-  Copy
+  Copy,
+  Phone,
+  Video,
+  Reply,
+  Palette,
+  Mic,
+  MicOff,
+  Headphones
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -30,10 +37,12 @@ import type {
   MessageAttachment, 
   MessageReaction, 
   SubscriptionTier, 
-  AvatarDecoration 
+  AvatarDecoration,
+  AppTheme,
+  MessageReply
 } from './types';
 
-export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration };
+export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration, AppTheme, MessageReply };
 
 /* ========================================================
    INDEXEDDB PERSISTENCE ENGINE FOR DISCORD CHAT LIST
@@ -89,6 +98,18 @@ async function idbLoadChats(key: string): Promise<any> {
 }
 
 /* ========================================================
+   THEME PALETTE ENGINE (NITRO CUSTOM GRADIENT ACCENTS)
+======================================================== */
+const APP_THEMES: { id: AppTheme; name: string; gradient: string; accent: string; border: string }[] = [
+  { id: 'midnight_purple', name: 'Midnight Purple', gradient: 'from-purple-900/40 via-slate-900 to-indigo-950/40', accent: 'text-purple-400', border: 'border-purple-500/40' },
+  { id: 'synthwave_neon', name: 'Synthwave Neon', gradient: 'from-pink-900/40 via-slate-900 to-purple-950/40', accent: 'text-pink-400', border: 'border-pink-500/40' },
+  { id: 'cyber_emerald', name: 'Cyber Emerald', gradient: 'from-emerald-900/40 via-slate-900 to-teal-950/40', accent: 'text-emerald-400', border: 'border-emerald-500/40' },
+  { id: 'solar_gold', name: 'Solar Gold', gradient: 'from-amber-900/40 via-slate-900 to-yellow-950/40', accent: 'text-amber-400', border: 'border-amber-500/40' },
+  { id: 'rose_sakura', name: 'Rose Sakura', gradient: 'from-rose-900/40 via-slate-900 to-pink-950/40', accent: 'text-rose-400', border: 'border-rose-500/40' },
+  { id: 'dark_obsidian', name: 'Dark Obsidian', gradient: 'from-slate-900 via-slate-950 to-black', accent: 'text-cyan-400', border: 'border-slate-700/40' }
+];
+
+/* ========================================================
    DISCORD NITRO CUSTOM EMOJIS & STICKERS CATALOG
 ======================================================== */
 const NITRO_CUSTOM_EMOJIS = [
@@ -139,7 +160,8 @@ const INITIAL_CHATS: ChatItem[] = [
         avatarDecoration: 'anime_power_aura',
         text: 'Hey Ray! Did you test our new Nitro Chat list Super Reactions engine? 🐸⚡', 
         timestamp: '1:15 PM',
-        status: 'read'
+        status: 'read',
+        isPinned: true
       },
       { 
         id: 'm2', 
@@ -184,7 +206,8 @@ const INITIAL_CHATS: ChatItem[] = [
         senderAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
         text: 'Welcome everyone to the Nitro Community lounge! 🚀 Enjoy HD file uploads & soundboards.',
         timestamp: '11:00 AM',
-        status: 'read'
+        status: 'read',
+        isPinned: true
       }
     ]
   },
@@ -256,18 +279,32 @@ export function ChatListCard({
   title = "Discord Nitro Channels & DMs",
   chats: initialChatsProp,
   initialSubscriptionTier = 'nitro_pro',
+  initialTheme = 'midnight_purple',
   onSelectChat,
   onNewChat
 }: ChatListCardProps) {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>(initialSubscriptionTier);
+  const [activeTheme, setActiveTheme] = useState<AppTheme>(initialTheme);
   const [chats, setChats] = useState<ChatItem[]>(initialChatsProp || INITIAL_CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || '1');
   const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isPinnedDrawerOpen, setIsPinnedDrawerOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   
+  // Voice Call & Mute Controls State
+  const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isDeafened, setIsDeafened] = useState(false);
+
+  // Message Thread Reply State
+  const [replyTarget, setReplyTarget] = useState<MessageReply | null>(null);
+
+  // Recipient Typing Simulation State
+  const [isRecipientTyping, setIsRecipientTyping] = useState(false);
+
   // Super Reaction Burst Particles
   const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
 
@@ -276,6 +313,9 @@ export function ChatListCard({
 
   const isNitroPro = subscriptionTier === 'nitro_pro';
   const isNitroBasic = subscriptionTier === 'nitro_basic' || isNitroPro;
+
+  // Theme Object
+  const themeObj = useMemo(() => APP_THEMES.find(t => t.id === activeTheme) || APP_THEMES[0], [activeTheme]);
 
   // Selected Active Chat Object
   const activeChat = useMemo(() => chats.find(c => c.id === selectedChatId) || chats[0], [chats, selectedChatId]);
@@ -286,6 +326,11 @@ export function ChatListCard({
     const q = searchQuery.toLowerCase();
     return chats.filter(c => c.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q));
   }, [chats, searchQuery]);
+
+  // Pinned Messages in Active Chat
+  const pinnedMessages = useMemo(() => {
+    return activeChat?.messages?.filter(m => m.isPinned) || [];
+  }, [activeChat]);
 
   // Toast Notification Trigger
   const showToast = useCallback((msg: string) => {
@@ -318,6 +363,7 @@ export function ChatListCard({
       if (stored) {
         if (stored.chats && stored.chats.length > 0) setChats(stored.chats);
         if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
+        if (stored.activeTheme) setActiveTheme(stored.activeTheme);
       }
     });
   }, []);
@@ -325,10 +371,10 @@ export function ChatListCard({
   // Auto-Save to IndexedDB
   useEffect(() => {
     const handler = setTimeout(() => {
-      idbSaveChats('discordChatListState', { chats, subscriptionTier });
+      idbSaveChats('discordChatListState', { chats, subscriptionTier, activeTheme });
     }, 500);
     return () => clearTimeout(handler);
-  }, [chats, subscriptionTier]);
+  }, [chats, subscriptionTier, activeTheme]);
 
   // Super Reaction Trigger Particle Blast
   const triggerSuperReactionBlast = useCallback((e: React.MouseEvent) => {
@@ -363,6 +409,7 @@ export function ChatListCard({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMe: true,
       status: 'sending',
+      replyTo: replyTarget || undefined,
       attachment
     };
 
@@ -379,6 +426,7 @@ export function ChatListCard({
     }));
 
     if (!overrideText) setInputText('');
+    setReplyTarget(null);
 
     // Simulate MNC status delivery transitions (sending -> delivered -> read)
     setTimeout(() => {
@@ -395,8 +443,12 @@ export function ChatListCard({
       })));
     }, 1500);
 
+    // Simulate recipient typing & response
+    setTimeout(() => setIsRecipientTyping(true), 2000);
+    setTimeout(() => setIsRecipientTyping(false), 4500);
+
     showToast('Message sent & saved to IndexedDB 🚀');
-  }, [inputText, activeChat.id, isNitroPro, playHapticSound, showToast]);
+  }, [inputText, activeChat.id, isNitroPro, replyTarget, playHapticSound, showToast]);
 
   // File Attachment Upload Handler with Tier Validation
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -483,6 +535,19 @@ export function ChatListCard({
     showToast(`Added reaction ${emoji}`);
   }, [activeChat.id, playHapticSound, showToast]);
 
+  // Pin / Unpin Message
+  const handleTogglePinMessage = useCallback((msgId: string) => {
+    playHapticSound(580);
+    setChats(prev => prev.map(c => {
+      if (c.id !== activeChat.id) return c;
+      return {
+        ...c,
+        messages: c.messages.map(m => m.id === msgId ? { ...m, isPinned: !m.isPinned } : m)
+      };
+    }));
+    showToast('Updated message pin state!');
+  }, [activeChat.id, playHapticSound, showToast]);
+
   return (
     <Tooltip.Provider>
       <div className="w-full max-w-6xl mx-auto font-sans selection:bg-purple-500 selection:text-white relative">
@@ -503,8 +568,8 @@ export function ChatListCard({
           )}
         </AnimatePresence>
 
-        {/* TOP DISCORD NITRO SUBSCRIPTION HEADER PILL */}
-        <div className="flex items-center justify-between gap-3 mb-3 px-2">
+        {/* TOP DISCORD NITRO SUBSCRIPTION & THEME HEADER PILL */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 px-2">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-400 fill-amber-400" />
@@ -512,19 +577,56 @@ export function ChatListCard({
             </h1>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsSubscriptionModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition transform hover:scale-105 cursor-pointer"
-          >
-            <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-            <span>Active Plan: {subscriptionTier.toUpperCase()}</span>
-            <Sparkles className="w-3 h-3 text-amber-300" />
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Nitro Themes Popover Selector */}
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 cursor-pointer transition"
+                >
+                  <Palette className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Theme: {themeObj.name}</span>
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content className="bg-slate-900 border border-slate-800 p-3 rounded-2xl shadow-2xl z-50 w-56 space-y-1.5">
+                  <div className="text-xs font-bold text-white mb-2">Nitro Custom Shader Themes</div>
+                  {APP_THEMES.map(th => (
+                    <button
+                      key={th.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTheme(th.id);
+                        showToast(`Applied ${th.name} Nitro Theme!`);
+                      }}
+                      className={`w-full p-2 rounded-xl text-xs font-bold flex items-center justify-between transition cursor-pointer ${
+                        activeTheme === th.id ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>{th.name}</span>
+                      {activeTheme === th.id && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+
+            {/* Nitro Tier Pill */}
+            <button
+              type="button"
+              onClick={() => setIsSubscriptionModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition transform hover:scale-105 cursor-pointer"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span>Active Plan: {subscriptionTier.toUpperCase()}</span>
+              <Sparkles className="w-3 h-3 text-amber-300" />
+            </button>
+          </div>
         </div>
 
         {/* MAIN CONTAINER: SIDEBAR CHAT LIST + CHAT THREAD VIEW */}
-        <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[720px] backdrop-blur-xl relative">
+        <div className={`bg-gradient-to-br ${themeObj.gradient} border ${themeObj.border} rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[720px] backdrop-blur-xl relative transition-all duration-500`}>
           
           {/* Super Reaction Particle Explosion Burst Overlay */}
           {particles.map(p => (
@@ -584,7 +686,7 @@ export function ChatListCard({
                       onClick={() => { playHapticSound(450); setSelectedChatId(chat.id); if (onSelectChat) onSelectChat(chat); }}
                       className={`p-3 rounded-2xl cursor-pointer transition flex items-center gap-3 relative ${
                         isSelected 
-                          ? 'bg-purple-600/10 dark:bg-purple-950/40 border border-purple-500/40 shadow-xs' 
+                          ? 'bg-purple-600/15 dark:bg-purple-950/50 border border-purple-500/50 shadow-xs' 
                           : 'hover:bg-slate-200/60 dark:hover:bg-slate-800/40 border border-transparent'
                       }`}
                     >
@@ -634,9 +736,9 @@ export function ChatListCard({
           </div>
 
           {/* RIGHT VIEW: ACTIVE CHAT THREAD & MESSAGES FEED */}
-          <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
+          <div className="flex-1 flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-md">
             
-            {/* Active Channel Header */}
+            {/* Active Channel Header with Voice Call & Pinned Messages Control */}
             <div className="p-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10">
@@ -664,12 +766,76 @@ export function ChatListCard({
                 </div>
               </div>
 
+              {/* Header Action Control Bar */}
               <div className="flex items-center gap-2">
+                {/* Voice Call Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playHapticSound(800);
+                    setIsVoiceCallActive(!isVoiceCallActive);
+                    showToast(!isVoiceCallActive ? 'Connected to Voice Channel 64Kbps RTC 🎙️' : 'Disconnected Voice Call');
+                  }}
+                  className={`p-2 rounded-xl border cursor-pointer transition ${
+                    isVoiceCallActive ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 animate-pulse' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
+                  }`}
+                  title="Voice Call"
+                >
+                  <Phone className="w-4 h-4" />
+                </button>
+
+                {/* Video Call Trigger */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playHapticSound(900);
+                    showToast('Starting 1080p 60FPS Nitro Video Call 📹');
+                  }}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+                  title="Video Call"
+                >
+                  <Video className="w-4 h-4" />
+                </button>
+
+                {/* Pinned Messages Drawer Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setIsPinnedDrawerOpen(true)}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer relative"
+                  title="Pinned Messages"
+                >
+                  <Pin className="w-4 h-4 text-amber-400" />
+                  {pinnedMessages.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-slate-950 font-bold text-[9px] rounded-full flex items-center justify-center">
+                      {pinnedMessages.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Audio Mute Toggle */}
                 <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer">
                   {soundEnabled ? <Volume2 className="w-4 h-4 text-purple-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
                 </button>
               </div>
             </div>
+
+            {/* LIVE VOICE CALL ACTIVE BAR */}
+            {isVoiceCallActive && (
+              <div className="bg-emerald-950/80 border-b border-emerald-500/40 px-4 py-2 flex items-center justify-between text-xs text-emerald-300 backdrop-blur-md">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="font-bold">Voice Connected / 64 Kbps RTC</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setIsMicMuted(!isMicMuted)} className="p-1 rounded bg-emerald-900/60 text-emerald-300">
+                    {isMicMuted ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5" />}
+                  </button>
+                  <button type="button" onClick={() => setIsDeafened(!isDeafened)} className="p-1 rounded bg-emerald-900/60 text-emerald-300">
+                    <Headphones className={`w-3.5 h-3.5 ${isDeafened ? 'text-rose-400' : ''}`} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Messages Feed Stream */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -722,6 +888,15 @@ export function ChatListCard({
                           </span>
                         )}
                       </div>
+
+                      {/* Quoted Reply Quote Header */}
+                      {msg.replyTo && (
+                        <div className="text-[10px] text-slate-400 bg-slate-200/60 dark:bg-slate-800/60 px-2 py-0.5 rounded-lg inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700">
+                          <Reply className="w-3 h-3 text-purple-400" />
+                          <span className="font-bold">{msg.replyTo.senderName}:</span>
+                          <span className="truncate max-w-[150px]">{msg.replyTo.text}</span>
+                        </div>
+                      )}
 
                       {/* Message Bubble */}
                       <div className={`p-3.5 rounded-2xl text-xs leading-relaxed border relative shadow-xs ${
@@ -808,6 +983,25 @@ export function ChatListCard({
                       <button
                         type="button"
                         onClick={() => {
+                          setReplyTarget({ id: msg.id, senderName: msg.senderName, text: msg.text });
+                          showToast(`Replying to @${msg.senderName}`);
+                        }}
+                        className="p-1 hover:bg-slate-800 rounded text-purple-400 cursor-pointer"
+                        title="Reply to Message"
+                      >
+                        <Reply className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePinMessage(msg.id)}
+                        className="p-1 hover:bg-slate-800 rounded text-amber-400 cursor-pointer"
+                        title="Pin Message"
+                      >
+                        <Pin className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
                           navigator.clipboard.writeText(msg.text);
                           showToast('Message text copied to clipboard!');
                         }}
@@ -821,11 +1015,37 @@ export function ChatListCard({
                   </div>
                 );
               })}
+
+              {/* Simulated Recipient Typing Dots Indicator */}
+              {isRecipientTyping && (
+                <div className="flex items-center gap-2 text-xs text-slate-400 italic font-medium animate-pulse">
+                  <span>{activeChat.name} is typing</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100" />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200" />
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* CHAT INPUT BAR WITH EMOJI & SOUNDBOARD DRAWERS */}
+            {/* CHAT INPUT BAR WITH REPLY BANNER, EMOJI & SOUNDBOARD DRAWERS */}
             <div className="p-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
               
+              {/* Quoted Reply Target Banner */}
+              {replyTarget && (
+                <div className="bg-purple-950/60 border border-purple-500/40 px-3 py-1.5 rounded-xl flex items-center justify-between text-xs text-purple-200">
+                  <div className="flex items-center gap-2 truncate">
+                    <Reply className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Replying to <strong className="text-white">@{replyTarget.senderName}</strong>:</span>
+                    <span className="truncate italic text-slate-300 max-w-[200px]">{replyTarget.text}</span>
+                  </div>
+                  <button type="button" onClick={() => setReplyTarget(null)} className="text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
                 
                 {/* File Upload Button */}
@@ -946,6 +1166,46 @@ export function ChatListCard({
           </div>
 
         </div>
+
+        {/* RADIX UI DIALOG MODAL FOR PINNED MESSAGES DRAWER */}
+        <Dialog.Root open={isPinnedDrawerOpen} onOpenChange={setIsPinnedDrawerOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 animate-in fade-in" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl z-50 max-h-[80vh] overflow-y-auto animate-in zoom-in-95">
+              
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+                <Dialog.Title className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Pin className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  Pinned Messages in #{activeChat.name}
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button type="button" className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+                    <X className="w-4 h-4" />
+                  </button>
+                </Dialog.Close>
+              </div>
+
+              <div className="space-y-3">
+                {pinnedMessages.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-400">
+                    No pinned messages in this channel yet. Hover over any message and click 📌 to pin it!
+                  </div>
+                ) : (
+                  pinnedMessages.map(msg => (
+                    <div key={msg.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="font-bold text-purple-400">{msg.senderName}</span>
+                        <span>{msg.timestamp}</span>
+                      </div>
+                      <p className="text-xs text-slate-800 dark:text-slate-200">{msg.text}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
 
         {/* RADIX UI DIALOG MODAL FOR NITRO SUBSCRIPTION TIER SELECTION */}
         <Dialog.Root open={isSubscriptionModalOpen} onOpenChange={setIsSubscriptionModalOpen}>
