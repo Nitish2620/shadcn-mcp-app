@@ -1266,6 +1266,20 @@ export function UserProfileCard({
           {/* Full Nitro Programmatic Profile Effect (Magic Spells, Glitch, Cosmic Void, Lightning, HypeSquad, Retrowave) */}
           <ProfileEffectOverlay effect={profile.profileEffect || 'hypesquad_explosion'} isUnlocked={isNitroPro && isScreenVisible} />
 
+          {/* Interactive Super Reaction Burst Particles */}
+          {particles.map(p => (
+            <motion.span
+              key={p.id}
+              initial={{ scale: 1, opacity: 1 }}
+              animate={{ y: -75, opacity: 0, scale: 1.9 }}
+              transition={{ duration: 0.9, ease: 'easeOut' }}
+              className="absolute z-50 text-xl pointer-events-none drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]"
+              style={{ left: p.x, top: p.y }}
+            >
+              ✨🚀👑⚡
+            </motion.span>
+          ))}
+
           {/* COVER BANNER SECTION WITH ANIMATED GIF/MP4 BANNER */}
           <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-slate-950">
             <BannerEffectOverlay effect={profile.bannerEffect} isUnlocked={isNitroPro && isScreenVisible} />
