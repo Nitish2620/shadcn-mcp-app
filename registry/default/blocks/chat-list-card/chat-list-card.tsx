@@ -5,6 +5,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
+  Plus,
   Send, 
   Pin, 
   X, 
@@ -461,8 +462,8 @@ export function ChatListCard({
           <div className="w-full md:w-80 border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col bg-slate-50/70 dark:bg-slate-950/60 shrink-0">
             
             {/* Search Header */}
-            <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/60 space-y-3">
-              <div className="relative">
+            <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-2">
+              <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -472,6 +473,17 @@ export function ChatListCard({
                   className="w-full bg-white dark:bg-slate-900 pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-purple-500 font-medium"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNewChat) onNewChat();
+                  showToast('Creating new DM channel...');
+                }}
+                className="p-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center cursor-pointer transition shadow-xs shrink-0"
+                title="New Chat DM"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Chat List Items */}
