@@ -21,7 +21,13 @@ import {
   CheckCheck,
   Clock,
   Hash,
-  Copy
+  Reply,
+  Edit2,
+  Trash2,
+  Phone,
+  Mic,
+  MicOff,
+  PhoneOff
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -29,11 +35,12 @@ import type {
   Message, 
   MessageAttachment, 
   MessageReaction, 
+  MessageReplyPreview,
   SubscriptionTier, 
   AvatarDecoration 
 } from './types';
 
-export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration };
+export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, MessageReplyPreview, SubscriptionTier, AvatarDecoration };
 
 /* ========================================================
    INDEXEDDB PERSISTENCE ENGINE FOR DISCORD CHAT LIST
@@ -127,6 +134,7 @@ const INITIAL_CHATS: ChatItem[] = [
     unreadCount: 2,
     isOnline: true,
     isPinned: true,
+    isTyping: true,
     category: 'dm',
     statusText: 'Streaming Next.js + Radix UI',
     messages: [
@@ -139,7 +147,8 @@ const INITIAL_CHATS: ChatItem[] = [
         avatarDecoration: 'anime_power_aura',
         text: 'Hey Ray! Did you test our new Nitro Chat list Super Reactions engine? 🐸⚡', 
         timestamp: '1:15 PM',
-        status: 'read'
+        status: 'read',
+        isPinned: true
       },
       { 
         id: 'm2', 
@@ -184,7 +193,8 @@ const INITIAL_CHATS: ChatItem[] = [
         senderAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
         text: 'Welcome everyone to the Nitro Community lounge! 🚀 Enjoy HD file uploads & soundboards.',
         timestamp: '11:00 AM',
-        status: 'read'
+        status: 'read',
+        isPinned: true
       }
     ]
   },
@@ -268,6 +278,16 @@ export function ChatListCard({
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   
+  // Voice Call Active State Overlay
+  const [activeVoiceCall, setActiveVoiceCall] = useState<boolean>(false);
+  const [isMicMuted, setIsMicMuted] = useState<boolean>(false);
+
+  // Replying Quote State
+  const [replyTarget, setReplyTarget] = useState<MessageReplyPreview | null>(null);
+
+  // Editing Message State
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+
   // Super Reaction Burst Particles
   const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
 
@@ -286,6 +306,11 @@ export function ChatListCard({
     const q = searchQuery.toLowerCase();
     return chats.filter(c => c.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q));
   }, [chats, searchQuery]);
+
+  // Pinned Messages in Active Chat Thread
+  const pinnedMessages = useMemo(() => {
+    return activeChat.messages.filter(m => m.isPinned);
+  }, [activeChat]);
 
   // Toast Notification Trigger
   const showToast = useCallback((msg: string) => {
@@ -344,12 +369,27 @@ export function ChatListCard({
     }, 1000);
   }, []);
 
-  // Send Message Logic with Real-Time Status Lifecycle (Sending ⏳ -> Delivered 🚀 -> Read 👀)
+  // Send or Edit Message Logic with Real-Time Status Lifecycle
   const handleSendMessage = useCallback((overrideText?: string, attachment?: MessageAttachment) => {
     const textToSend = (overrideText || inputText).trim();
     if (!textToSend && !attachment) return;
 
     playHapticSound(750, 'triangle');
+
+    // If Editing Existing Message
+    if (editingMsgId) {
+      setChats(prev => prev.map(c => {
+        if (c.id !== activeChat.id) return c;
+        return {
+          ...c,
+          messages: c.messages.map(m => m.id === editingMsgId ? { ...m, text: textToSend, isEdited: true } : m)
+        };
+      }));
+      setEditingMsgId(null);
+      setInputText('');
+      showToast('Edited message updated!');
+      return;
+    }
 
     const msgId = 'm-' + Date.now();
     const newMsg: Message = {
@@ -363,6 +403,7 @@ export function ChatListCard({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMe: true,
       status: 'sending',
+      replyToMessage: replyTarget || undefined,
       attachment
     };
 
@@ -379,6 +420,7 @@ export function ChatListCard({
     }));
 
     if (!overrideText) setInputText('');
+    setReplyTarget(null);
 
     // Simulate MNC status delivery transitions (sending -> delivered -> read)
     setTimeout(() => {
@@ -396,7 +438,7 @@ export function ChatListCard({
     }, 1500);
 
     showToast('Message sent & saved to IndexedDB 🚀');
-  }, [inputText, activeChat.id, isNitroPro, playHapticSound, showToast]);
+  }, [inputText, editingMsgId, activeChat.id, isNitroPro, replyTarget, playHapticSound, showToast]);
 
   // File Attachment Upload Handler with Tier Validation
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -481,6 +523,32 @@ export function ChatListCard({
       };
     }));
     showToast(`Added reaction ${emoji}`);
+  }, [activeChat.id, playHapticSound, showToast]);
+
+  // Delete Message Handler
+  const handleDeleteMessage = useCallback((msgId: string) => {
+    playHapticSound(300);
+    setChats(prev => prev.map(c => {
+      if (c.id !== activeChat.id) return c;
+      return {
+        ...c,
+        messages: c.messages.filter(m => m.id !== msgId)
+      };
+    }));
+    showToast('Message deleted');
+  }, [activeChat.id, playHapticSound, showToast]);
+
+  // Toggle Pin Message Handler
+  const handleTogglePinMessage = useCallback((msgId: string) => {
+    playHapticSound(580);
+    setChats(prev => prev.map(c => {
+      if (c.id !== activeChat.id) return c;
+      return {
+        ...c,
+        messages: c.messages.map(m => m.id === msgId ? { ...m, isPinned: !m.isPinned } : m)
+      };
+    }));
+    showToast('Updated pinned message');
   }, [activeChat.id, playHapticSound, showToast]);
 
   return (
@@ -617,7 +685,15 @@ export function ChatListCard({
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono">{chat.timestamp}</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{chat.lastMessage}</p>
+
+                        {chat.isTyping ? (
+                          <span className="text-[10px] text-purple-400 font-bold flex items-center gap-1 animate-pulse">
+                            <span>typing</span>
+                            <span className="w-1 h-1 bg-purple-400 rounded-full animate-ping" />
+                          </span>
+                        ) : (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{chat.lastMessage}</p>
+                        )}
                       </div>
 
                       {chat.unreadCount && chat.unreadCount > 0 && (
@@ -664,12 +740,105 @@ export function ChatListCard({
                 </div>
               </div>
 
+              {/* Header Action Controls (Voice Call, Pinned Drawer, Audio Haptics) */}
               <div className="flex items-center gap-2">
+                
+                {/* Start Voice Call Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playHapticSound(activeVoiceCall ? 400 : 800);
+                    setActiveVoiceCall(!activeVoiceCall);
+                    showToast(!activeVoiceCall ? 'Connected to Voice Channel 🎧' : 'Disconnected Voice Call');
+                  }}
+                  className={`p-2 rounded-xl border transition cursor-pointer ${
+                    activeVoiceCall 
+                      ? 'bg-emerald-500 text-white border-emerald-400 shadow-md animate-pulse' 
+                      : 'border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                  title="Toggle Voice Call"
+                >
+                  <Phone className="w-4 h-4" />
+                </button>
+
+                {/* Pinned Messages Popover Drawer */}
+                <Popover.Root>
+                  <Popover.Trigger asChild>
+                    <button type="button" className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer transition">
+                      <Pin className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-2xl z-50 w-72 text-white space-y-3">
+                      <div className="font-bold text-xs flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="flex items-center gap-1.5">
+                          <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                          Pinned Channel Messages ({pinnedMessages.length})
+                        </span>
+                      </div>
+                      <div className="space-y-2 max-h-56 overflow-y-auto">
+                        {pinnedMessages.length === 0 ? (
+                          <div className="text-[11px] text-slate-400">No pinned messages yet.</div>
+                        ) : (
+                          pinnedMessages.map(pm => (
+                            <div key={pm.id} className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/60 text-xs">
+                              <div className="font-bold text-purple-400 text-[10px]">{pm.senderName} • {pm.timestamp}</div>
+                              <p className="text-slate-200 text-[11px] mt-0.5">{pm.text}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+
+                {/* Sound Haptics Toggle */}
                 <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer">
                   {soundEnabled ? <Volume2 className="w-4 h-4 text-purple-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
                 </button>
               </div>
             </div>
+
+            {/* Active Voice Call Floating Banner */}
+            <AnimatePresence>
+              {activeVoiceCall && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="bg-emerald-950/80 border-b border-emerald-500/40 px-4 py-2.5 flex items-center justify-between backdrop-blur-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+                    <span className="text-xs font-extrabold text-emerald-300 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                      Voice Connected / 24ms RTC Latency
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsMicMuted(!isMicMuted)}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        isMicMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-emerald-300'
+                      }`}
+                    >
+                      {isMicMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveVoiceCall(false)}
+                      className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1"
+                    >
+                      <PhoneOff className="w-3.5 h-3.5" />
+                      <span>Disconnect</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Messages Feed Stream */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -713,6 +882,8 @@ export function ChatListCard({
                         <span className="font-bold text-slate-700 dark:text-slate-300">{msg.senderName}</span>
                         <span>{msg.timestamp}</span>
 
+                        {msg.isEdited && <span className="text-[9px] text-slate-400 italic">(edited)</span>}
+
                         {/* Real-Time Message Status Delivery Indicators */}
                         {msg.isMe && (
                           <span className="ml-1 text-[10px]">
@@ -722,6 +893,13 @@ export function ChatListCard({
                           </span>
                         )}
                       </div>
+
+                      {/* Quoted Reply Preview */}
+                      {msg.replyToMessage && (
+                        <div className="text-[10px] bg-slate-200/80 dark:bg-slate-800/80 border-l-2 border-purple-500 px-2.5 py-1 rounded-r-lg text-slate-600 dark:text-slate-300 font-medium">
+                          Replying to <span className="font-bold text-purple-400">{msg.replyToMessage.senderName}</span>: "{msg.replyToMessage.text}"
+                        </div>
+                      )}
 
                       {/* Message Bubble */}
                       <div className={`p-3.5 rounded-2xl text-xs leading-relaxed border relative shadow-xs ${
@@ -799,29 +977,62 @@ export function ChatListCard({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleAddReactionToMessage(msg.id, '❤️')}
-                        className="p-1 hover:bg-slate-800 rounded cursor-pointer"
-                        title="Add Heart Reaction"
+                        onClick={() => {
+                          setReplyTarget({ id: msg.id, senderName: msg.senderName, text: msg.text });
+                          showToast(`Replying to ${msg.senderName}`);
+                        }}
+                        className="p-1 hover:bg-slate-800 rounded text-purple-400 cursor-pointer"
+                        title="Reply to message"
                       >
-                        ❤️
+                        <Reply className="w-3 h-3" />
                       </button>
+                      {msg.isMe && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingMsgId(msg.id);
+                            setInputText(msg.text);
+                          }}
+                          className="p-1 hover:bg-slate-800 rounded text-blue-400 cursor-pointer"
+                          title="Edit message"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(msg.text);
-                          showToast('Message text copied to clipboard!');
-                        }}
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 cursor-pointer"
-                        title="Copy Message"
+                        onClick={() => handleTogglePinMessage(msg.id)}
+                        className="p-1 hover:bg-slate-800 rounded text-amber-400 cursor-pointer"
+                        title="Pin message"
                       >
-                        <Copy className="w-3 h-3" />
+                        <Pin className="w-3 h-3" />
                       </button>
+                      {msg.isMe && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="p-1 hover:bg-slate-800 rounded text-rose-400 cursor-pointer"
+                          title="Delete message"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
 
                   </div>
                 );
               })}
             </div>
+
+            {/* Replying Preview Banner Above Input */}
+            {replyTarget && (
+              <div className="bg-purple-950/40 border-t border-purple-500/30 px-4 py-1.5 flex items-center justify-between text-xs text-purple-300">
+                <span>Replying to <strong>{replyTarget.senderName}</strong>: "{replyTarget.text.slice(0, 30)}..."</span>
+                <button type="button" onClick={() => setReplyTarget(null)} className="p-1 hover:text-white cursor-pointer">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* CHAT INPUT BAR WITH EMOJI & SOUNDBOARD DRAWERS */}
             <div className="p-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
@@ -937,7 +1148,7 @@ export function ChatListCard({
                   className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  <span className="hidden sm:inline">Send</span>
+                  <span className="hidden sm:inline">{editingMsgId ? 'Save' : 'Send'}</span>
                 </button>
 
               </form>

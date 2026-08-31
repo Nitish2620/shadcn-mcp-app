@@ -33,6 +33,12 @@ export interface LinkPreview {
   thumbnail?: string;
 }
 
+export interface MessageReplyPreview {
+  id: string;
+  senderName: string;
+  text: string;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -47,6 +53,8 @@ export interface Message {
   reactions?: MessageReaction[];
   attachment?: MessageAttachment;
   linkPreview?: LinkPreview;
+  replyToMessage?: MessageReplyPreview;
+  isEdited?: boolean;
   isNitroSticker?: boolean;
   isNitroSoundboard?: boolean;
   isPinned?: boolean;
@@ -66,6 +74,8 @@ export interface ChatItem {
   statusText?: string;
   category?: 'dm' | 'channel';
   serverIcon?: string;
+  isTyping?: boolean;
+  isInCall?: boolean;
   messages: Message[];
 }
 
