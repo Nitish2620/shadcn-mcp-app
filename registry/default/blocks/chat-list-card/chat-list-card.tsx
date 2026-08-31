@@ -17,14 +17,11 @@ import {
   SmilePlus,
   Music,
   FileText,
-  Phone,
-  Video,
-  Mic,
-  MicOff,
-  Palette,
-  Reply,
-  Edit2,
-  Trash2
+  Check,
+  CheckCheck,
+  Clock,
+  Hash,
+  Copy
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -33,12 +30,10 @@ import type {
   MessageAttachment, 
   MessageReaction, 
   SubscriptionTier, 
-  AvatarDecoration,
-  ChatTheme,
-  ReplyQuote
+  AvatarDecoration 
 } from './types';
 
-export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration, ChatTheme, ReplyQuote };
+export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration };
 
 /* ========================================================
    INDEXEDDB PERSISTENCE ENGINE FOR DISCORD CHAT LIST
@@ -94,19 +89,7 @@ async function idbLoadChats(key: string): Promise<any> {
 }
 
 /* ========================================================
-   DISCORD NITRO CUSTOM THEMES & HSL BACKDROPS
-======================================================== */
-const DISCORD_NITRO_THEMES: { id: ChatTheme; name: string; classNames: string; previewColor: string; isNitro: boolean }[] = [
-  { id: 'default', name: 'Dark Mode (Classic)', classNames: 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100', previewColor: 'bg-slate-900', isNitro: false },
-  { id: 'synthwave_neon', name: 'Synthwave Neon 🌆', classNames: 'bg-slate-950/95 text-pink-100 border-pink-500/40 shadow-[0_0_50px_rgba(236,72,153,0.25)]', previewColor: 'bg-gradient-to-r from-purple-900 to-pink-900', isNitro: true },
-  { id: 'cyber_emerald', name: 'Cyber Matrix 💻', classNames: 'bg-slate-950/95 text-emerald-100 border-emerald-500/40 shadow-[0_0_50px_rgba(16,185,129,0.25)]', previewColor: 'bg-gradient-to-r from-emerald-950 to-teal-900', isNitro: true },
-  { id: 'solar_gold', name: 'Solar Gold ☀️', classNames: 'bg-amber-950/90 text-amber-100 border-amber-500/40 shadow-[0_0_50px_rgba(245,158,11,0.25)]', previewColor: 'bg-gradient-to-r from-amber-900 to-yellow-800', isNitro: true },
-  { id: 'midnight_obsidian', name: 'Cosmic Void 🌌', classNames: 'bg-indigo-950/95 text-indigo-100 border-indigo-500/40 shadow-[0_0_50px_rgba(99,102,241,0.25)]', previewColor: 'bg-gradient-to-r from-indigo-950 to-purple-900', isNitro: true },
-  { id: 'sakura_dream', name: 'Sakura Dream 🌸', classNames: 'bg-rose-950/90 text-rose-100 border-rose-400/40 shadow-[0_0_50px_rgba(251,113,133,0.25)]', previewColor: 'bg-gradient-to-r from-rose-950 to-pink-900', isNitro: true }
-];
-
-/* ========================================================
-   DISCORD NITRO CUSTOM EMOJIS & ANIMATED STICKERS CATALOG
+   DISCORD NITRO CUSTOM EMOJIS & STICKERS CATALOG
 ======================================================== */
 const NITRO_CUSTOM_EMOJIS = [
   { code: ':pepe_hype:', emoji: '🐸⚡', name: 'Pepe Hype', isNitro: true },
@@ -120,9 +103,9 @@ const NITRO_CUSTOM_EMOJIS = [
 ];
 
 const NITRO_ANIMATED_STICKERS = [
-  { id: 'st1', name: 'Cyberpunk Neon Wave', emoji: '🌌', gifUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&auto=format&fit=crop&q=80', isNitroPro: true },
-  { id: 'st2', name: 'Golden Dragon Flame', emoji: '🐉', gifUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=80', isNitroPro: true },
-  { id: 'st3', name: 'Sakura Petal Breeze', emoji: '🌸', gifUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80', isNitroPro: true }
+  { id: 'st1', name: 'Cyberpunk Neon Wave', emoji: '🌌', isNitroPro: true },
+  { id: 'st2', name: 'Golden Dragon Flame', emoji: '🐉', isNitroPro: true },
+  { id: 'st3', name: 'Sakura Petal Breeze', emoji: '🌸', isNitroPro: true }
 ];
 
 const NITRO_SOUNDBOARD_CLIPS = [
@@ -144,6 +127,7 @@ const INITIAL_CHATS: ChatItem[] = [
     unreadCount: 2,
     isOnline: true,
     isPinned: true,
+    category: 'dm',
     statusText: 'Streaming Next.js + Radix UI',
     messages: [
       { 
@@ -154,7 +138,8 @@ const INITIAL_CHATS: ChatItem[] = [
         animatedAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         avatarDecoration: 'anime_power_aura',
         text: 'Hey Ray! Did you test our new Nitro Chat list Super Reactions engine? 🐸⚡', 
-        timestamp: '1:15 PM' 
+        timestamp: '1:15 PM',
+        status: 'read'
       },
       { 
         id: 'm2', 
@@ -176,7 +161,30 @@ const INITIAL_CHATS: ChatItem[] = [
         senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         text: 'Check out these custom Nitro animated emojis 🚀', 
         timestamp: '1:20 PM', 
+        status: 'read',
         reactions: [{ emoji: '❤️', count: 2, users: ['me'] }] 
+      }
+    ]
+  },
+  {
+    id: 'c1',
+    name: 'general-lounge',
+    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+    lastMessage: 'Welcome everyone to the Nitro Community lounge!',
+    timestamp: '2h ago',
+    unreadCount: 5,
+    category: 'channel',
+    serverIcon: '🌐',
+    statusText: 'Official Community Lounge',
+    messages: [
+      {
+        id: 'cm1',
+        senderId: 'bot',
+        senderName: 'Nitro Bot',
+        senderAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+        text: 'Welcome everyone to the Nitro Community lounge! 🚀 Enjoy HD file uploads & soundboards.',
+        timestamp: '11:00 AM',
+        status: 'read'
       }
     ]
   },
@@ -189,9 +197,10 @@ const INITIAL_CHATS: ChatItem[] = [
     lastMessage: 'Let me check and get back to you.',
     timestamp: 'Yesterday',
     isOnline: true,
+    category: 'dm',
     statusText: 'Online',
     messages: [
-      { id: 'm1', senderId: '2', senderName: 'James Okonkwo', senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', text: 'Can we schedule the review meeting tomorrow?', timestamp: 'Yesterday' }
+      { id: 'm1', senderId: '2', senderName: 'James Okonkwo', senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', text: 'Can we schedule the review meeting tomorrow?', timestamp: 'Yesterday', status: 'read' }
     ]
   }
 ];
@@ -251,7 +260,6 @@ export function ChatListCard({
   onNewChat
 }: ChatListCardProps) {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>(initialSubscriptionTier);
-  const [chatTheme, setChatTheme] = useState<ChatTheme>('default');
   const [chats, setChats] = useState<ChatItem[]>(initialChatsProp || INITIAL_CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || '1');
   const [searchQuery, setSearchQuery] = useState('');
@@ -260,17 +268,6 @@ export function ChatListCard({
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   
-  // Voice & Video Call Overlay State
-  const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isDeafened, setIsDeafened] = useState(false);
-
-  // Quote Reply State
-  const [replyQuote, setReplyQuote] = useState<ReplyQuote | null>(null);
-
-  // Inline Message Editing State
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-
   // Super Reaction Burst Particles
   const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
 
@@ -283,8 +280,12 @@ export function ChatListCard({
   // Selected Active Chat Object
   const activeChat = useMemo(() => chats.find(c => c.id === selectedChatId) || chats[0], [chats, selectedChatId]);
 
-  // Selected Theme Object
-  const currentThemeObj = useMemo(() => DISCORD_NITRO_THEMES.find(t => t.id === chatTheme) || DISCORD_NITRO_THEMES[0], [chatTheme]);
+  // Filtered Chats by Search Query
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) return chats;
+    const q = searchQuery.toLowerCase();
+    return chats.filter(c => c.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q));
+  }, [chats, searchQuery]);
 
   // Toast Notification Trigger
   const showToast = useCallback((msg: string) => {
@@ -315,9 +316,8 @@ export function ChatListCard({
   useEffect(() => {
     idbLoadChats('discordChatListState').then(stored => {
       if (stored) {
-        if (stored.chats) setChats(stored.chats);
+        if (stored.chats && stored.chats.length > 0) setChats(stored.chats);
         if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
-        if (stored.chatTheme) setChatTheme(stored.chatTheme);
       }
     });
   }, []);
@@ -325,10 +325,10 @@ export function ChatListCard({
   // Auto-Save to IndexedDB
   useEffect(() => {
     const handler = setTimeout(() => {
-      idbSaveChats('discordChatListState', { chats, subscriptionTier, chatTheme });
+      idbSaveChats('discordChatListState', { chats, subscriptionTier });
     }, 500);
     return () => clearTimeout(handler);
-  }, [chats, subscriptionTier, chatTheme]);
+  }, [chats, subscriptionTier]);
 
   // Super Reaction Trigger Particle Blast
   const triggerSuperReactionBlast = useCallback((e: React.MouseEvent) => {
@@ -344,32 +344,16 @@ export function ChatListCard({
     }, 1000);
   }, []);
 
-  // Send Message Logic with Tier Validation & Inline Reply
+  // Send Message Logic with Real-Time Status Lifecycle (Sending ⏳ -> Delivered 🚀 -> Read 👀)
   const handleSendMessage = useCallback((overrideText?: string, attachment?: MessageAttachment) => {
     const textToSend = (overrideText || inputText).trim();
     if (!textToSend && !attachment) return;
 
     playHapticSound(750, 'triangle');
 
-    // If Editing Existing Message
-    if (editingMessageId) {
-      setChats(prev => prev.map(chat => {
-        if (chat.id === activeChat.id) {
-          return {
-            ...chat,
-            messages: chat.messages.map(m => m.id === editingMessageId ? { ...m, text: textToSend, isEdited: true } : m)
-          };
-        }
-        return chat;
-      }));
-      setEditingMessageId(null);
-      setInputText('');
-      showToast('Message edited!');
-      return;
-    }
-
+    const msgId = 'm-' + Date.now();
     const newMsg: Message = {
-      id: 'm-' + Date.now(),
+      id: msgId,
       senderId: 'me',
       senderName: 'You',
       senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
@@ -378,9 +362,8 @@ export function ChatListCard({
       text: textToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMe: true,
-      status: 'sent',
-      attachment,
-      replyTo: replyQuote || undefined
+      status: 'sending',
+      attachment
     };
 
     setChats(prev => prev.map(chat => {
@@ -396,9 +379,24 @@ export function ChatListCard({
     }));
 
     if (!overrideText) setInputText('');
-    setReplyQuote(null);
+
+    // Simulate MNC status delivery transitions (sending -> delivered -> read)
+    setTimeout(() => {
+      setChats(prev => prev.map(c => ({
+        ...c,
+        messages: c.messages.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)
+      })));
+    }, 600);
+
+    setTimeout(() => {
+      setChats(prev => prev.map(c => ({
+        ...c,
+        messages: c.messages.map(m => m.id === msgId ? { ...m, status: 'read' } : m)
+      })));
+    }, 1500);
+
     showToast('Message sent & saved to IndexedDB 🚀');
-  }, [inputText, editingMessageId, activeChat.id, isNitroPro, replyQuote, playHapticSound, showToast]);
+  }, [inputText, activeChat.id, isNitroPro, playHapticSound, showToast]);
 
   // File Attachment Upload Handler with Tier Validation
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -458,6 +456,33 @@ export function ChatListCard({
     });
   }, [isNitroPro, handleSendMessage, playHapticSound, showToast]);
 
+  // Add Reaction to Message
+  const handleAddReactionToMessage = useCallback((msgId: string, emoji: string, isSuper = false) => {
+    playHapticSound(620);
+    setChats(prev => prev.map(c => {
+      if (c.id !== activeChat.id) return c;
+      return {
+        ...c,
+        messages: c.messages.map(m => {
+          if (m.id !== msgId) return m;
+          const rxList = m.reactions || [];
+          const existing = rxList.find(r => r.emoji === emoji);
+          if (existing) {
+            return {
+              ...m,
+              reactions: rxList.map(r => r.emoji === emoji ? { ...r, count: r.count + 1 } : r)
+            };
+          }
+          return {
+            ...m,
+            reactions: [...rxList, { emoji, count: 1, users: ['me'], isSuperReaction: isSuper }]
+          };
+        })
+      };
+    }));
+    showToast(`Added reaction ${emoji}`);
+  }, [activeChat.id, playHapticSound, showToast]);
+
   return (
     <Tooltip.Provider>
       <div className="w-full max-w-6xl mx-auto font-sans selection:bg-purple-500 selection:text-white relative">
@@ -478,8 +503,8 @@ export function ChatListCard({
           )}
         </AnimatePresence>
 
-        {/* TOP DISCORD NITRO SUBSCRIPTION & THEME HEADER PILL */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 px-2">
+        {/* TOP DISCORD NITRO SUBSCRIPTION HEADER PILL */}
+        <div className="flex items-center justify-between gap-3 mb-3 px-2">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-400 fill-amber-400" />
@@ -487,67 +512,19 @@ export function ChatListCard({
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Custom Nitro Theme Picker Popover */}
-            <Popover.Root>
-              <Popover.Trigger asChild>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer border border-slate-300 dark:border-slate-700"
-                >
-                  <Palette className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Theme: {currentThemeObj.name}</span>
-                </button>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content className="bg-slate-900 border border-slate-800 p-3 rounded-2xl shadow-2xl z-50 w-60 space-y-2">
-                  <div className="text-xs font-bold text-white flex items-center justify-between">
-                    <span>Discord Nitro Themes</span>
-                    <span className="text-[9px] font-mono text-purple-400">{isNitroBasic ? 'UNLOCKED' : 'LOCKED'}</span>
-                  </div>
-                  <div className="space-y-1">
-                    {DISCORD_NITRO_THEMES.map(theme => (
-                      <button
-                        key={theme.id}
-                        type="button"
-                        onClick={() => {
-                          if (theme.isNitro && !isNitroBasic) {
-                            showToast('🔒 Custom HSL Themes require Nitro Basic or Pro!');
-                            setIsSubscriptionModalOpen(true);
-                            return;
-                          }
-                          setChatTheme(theme.id);
-                          showToast(`Applied Theme: ${theme.name}`);
-                        }}
-                        className={`w-full p-2 rounded-xl text-xs font-bold text-white flex items-center justify-between transition cursor-pointer ${
-                          chatTheme === theme.id ? 'bg-purple-600/40 border border-purple-500' : 'hover:bg-slate-800'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className={`w-3.5 h-3.5 rounded-full ${theme.previewColor}`} />
-                          <span>{theme.name}</span>
-                        </span>
-                        {theme.isNitro && !isNitroBasic && <Crown className="w-3 h-3 text-amber-400" />}
-                      </button>
-                    ))}
-                  </div>
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-
-            <button
-              type="button"
-              onClick={() => setIsSubscriptionModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition transform hover:scale-105 cursor-pointer"
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-              <span>Plan: {subscriptionTier.toUpperCase()}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsSubscriptionModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition transform hover:scale-105 cursor-pointer"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+            <span>Active Plan: {subscriptionTier.toUpperCase()}</span>
+            <Sparkles className="w-3 h-3 text-amber-300" />
+          </button>
         </div>
 
         {/* MAIN CONTAINER: SIDEBAR CHAT LIST + CHAT THREAD VIEW */}
-        <div className={`border rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[740px] backdrop-blur-xl relative transition-all duration-300 ${currentThemeObj.classNames}`}>
+        <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[720px] backdrop-blur-xl relative">
           
           {/* Super Reaction Particle Explosion Burst Overlay */}
           {particles.map(p => (
@@ -566,7 +543,7 @@ export function ChatListCard({
           {/* LEFT SIDEBAR: CHANNEL & DIRECT MESSAGE CHAT LIST */}
           <div className="w-full md:w-80 border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col bg-slate-50/70 dark:bg-slate-950/60 shrink-0">
             
-            {/* Search Header with + New Chat Button */}
+            {/* Search Header */}
             <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -591,63 +568,92 @@ export function ChatListCard({
               </button>
             </div>
 
-            {/* Chat List Items */}
+            {/* Chat List Items Filtered by Search */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {chats.map(chat => {
-                const isSelected = chat.id === selectedChatId;
-                return (
-                  <div
-                    key={chat.id}
-                    onClick={() => { playHapticSound(450); setSelectedChatId(chat.id); if (onSelectChat) onSelectChat(chat); }}
-                    className={`p-3 rounded-2xl cursor-pointer transition flex items-center gap-3 relative ${
-                      isSelected 
-                        ? 'bg-purple-600/10 dark:bg-purple-950/40 border border-purple-500/40 shadow-xs' 
-                        : 'hover:bg-slate-200/60 dark:hover:bg-slate-800/40 border border-transparent'
-                    }`}
-                  >
-                    {/* Avatar with Shop Decoration */}
-                    <div className="relative shrink-0 w-11 h-11">
-                      <AvatarDecorationFrame decoration={chat.avatarDecoration} isUnlocked={isNitroPro} />
-                      <img
-                        src={isNitroPro && chat.animatedAvatar ? chat.animatedAvatar : chat.avatar}
-                        alt={chat.name}
-                        className="w-full h-full rounded-full object-cover relative z-10"
-                      />
-                      {chat.isOnline && (
-                        <span className="w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 absolute bottom-0 right-0 z-20" />
+              {filteredChats.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  No channels or DMs found matching "{searchQuery}"
+                </div>
+              ) : (
+                filteredChats.map(chat => {
+                  const isSelected = chat.id === selectedChatId;
+                  const isChannel = chat.category === 'channel';
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => { playHapticSound(450); setSelectedChatId(chat.id); if (onSelectChat) onSelectChat(chat); }}
+                      className={`p-3 rounded-2xl cursor-pointer transition flex items-center gap-3 relative ${
+                        isSelected 
+                          ? 'bg-purple-600/10 dark:bg-purple-950/40 border border-purple-500/40 shadow-xs' 
+                          : 'hover:bg-slate-200/60 dark:hover:bg-slate-800/40 border border-transparent'
+                      }`}
+                    >
+                      {/* Avatar or Channel Icon */}
+                      <div className="relative shrink-0 w-11 h-11">
+                        {isChannel ? (
+                          <div className="w-full h-full rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold text-base">
+                            <Hash className="w-5 h-5 text-purple-400" />
+                          </div>
+                        ) : (
+                          <>
+                            <AvatarDecorationFrame decoration={chat.avatarDecoration} isUnlocked={isNitroPro} />
+                            <img
+                              src={isNitroPro && chat.animatedAvatar ? chat.animatedAvatar : chat.avatar}
+                              alt={chat.name}
+                              className="w-full h-full rounded-full object-cover relative z-10"
+                            />
+                            {chat.isOnline && (
+                              <span className="w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 absolute bottom-0 right-0 z-20" />
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="font-bold text-xs text-slate-900 dark:text-white truncate flex items-center gap-1">
+                            {isChannel ? `# ${chat.name}` : chat.name}
+                            {chat.isPinned && <Pin className="w-3 h-3 text-amber-400 fill-amber-400" />}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">{chat.timestamp}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{chat.lastMessage}</p>
+                      </div>
+
+                      {chat.unreadCount && chat.unreadCount > 0 && (
+                        <span className="bg-purple-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full shrink-0">
+                          {chat.unreadCount}
+                        </span>
                       )}
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate flex items-center gap-1">
-                          {chat.name}
-                          {chat.isPinned && <Pin className="w-3 h-3 text-amber-400 fill-amber-400" />}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">{chat.timestamp}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{chat.lastMessage}</p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
           </div>
 
           {/* RIGHT VIEW: ACTIVE CHAT THREAD & MESSAGES FEED */}
-          <div className="flex-1 flex flex-col bg-transparent relative">
+          <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
             
             {/* Active Channel Header */}
-            <div className="p-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="p-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10">
-                  <AvatarDecorationFrame decoration={activeChat.avatarDecoration} isUnlocked={isNitroPro} />
-                  <img src={isNitroPro && activeChat.animatedAvatar ? activeChat.animatedAvatar : activeChat.avatar} alt={activeChat.name} className="w-full h-full rounded-full object-cover relative z-10" />
+                  {activeChat.category === 'channel' ? (
+                    <div className="w-full h-full rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold text-base">
+                      <Hash className="w-5 h-5 text-purple-400" />
+                    </div>
+                  ) : (
+                    <>
+                      <AvatarDecorationFrame decoration={activeChat.avatarDecoration} isUnlocked={isNitroPro} />
+                      <img src={isNitroPro && activeChat.animatedAvatar ? activeChat.animatedAvatar : activeChat.avatar} alt={activeChat.name} className="w-full h-full rounded-full object-cover relative z-10" />
+                    </>
+                  )}
                 </div>
                 <div>
                   <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                    {activeChat.name}
+                    {activeChat.category === 'channel' ? `# ${activeChat.name}` : activeChat.name}
                     {isNitroPro && (
                       <span className="text-[9px] font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.2 rounded-full shadow-xs">
                         NITRO MEMBER
@@ -658,60 +664,12 @@ export function ChatListCard({
                 </div>
               </div>
 
-              {/* Header Action Buttons (HD Voice / Screen Share & Audio Toggle) */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsVoiceCallActive(!isVoiceCallActive);
-                    showToast(!isVoiceCallActive ? 'Connected to 60FPS HD Voice Call' : 'Call ended');
-                  }}
-                  className={`p-2 rounded-xl border transition cursor-pointer text-xs font-bold flex items-center gap-1 ${
-                    isVoiceCallActive 
-                      ? 'bg-rose-600 text-white border-rose-500 animate-pulse' 
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500'
-                  }`}
-                >
-                  <Phone className="w-4 h-4" />
-                  <span className="hidden sm:inline">{isVoiceCallActive ? 'Disconnect' : 'Start Call'}</span>
-                </button>
-
                 <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer">
                   {soundEnabled ? <Volume2 className="w-4 h-4 text-purple-500" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
                 </button>
               </div>
             </div>
-
-            {/* LIVE VOICE & SCREEN SHARE CALL BANNER OVERLAY */}
-            {isVoiceCallActive && (
-              <div className="bg-gradient-to-r from-purple-950 to-slate-900 p-3 border-b border-purple-500/40 flex items-center justify-between text-xs text-white">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
-                  <span className="font-bold flex items-center gap-1.5">
-                    <Video className="w-4 h-4 text-purple-400" />
-                    HD 60FPS Voice Stream Connected (Nitro)
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsMuted(!isMuted)}
-                    className={`p-1.5 rounded-lg font-bold ${isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
-                  >
-                    {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsDeafened(!isDeafened)}
-                    className={`p-1.5 rounded-lg font-bold ${isDeafened ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-300'}`}
-                  >
-                    {isDeafened ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Messages Feed Stream */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -719,76 +677,58 @@ export function ChatListCard({
                 return (
                   <div key={msg.id} className={`flex items-start gap-3 group relative ${msg.isMe ? 'flex-row-reverse' : ''}`}>
                     
-                    {/* Message Avatar */}
-                    <div className="relative w-9 h-9 shrink-0">
-                      <AvatarDecorationFrame decoration={msg.avatarDecoration} isUnlocked={isNitroPro} />
-                      <img src={isNitroPro && msg.animatedAvatar ? msg.animatedAvatar : msg.senderAvatar} alt={msg.senderName} className="w-full h-full rounded-full object-cover relative z-10" />
-                    </div>
+                    {/* Clickable Mini Profile Popover Avatar */}
+                    <Popover.Root>
+                      <Popover.Trigger asChild>
+                        <button type="button" className="relative w-9 h-9 shrink-0 cursor-pointer">
+                          <AvatarDecorationFrame decoration={msg.avatarDecoration} isUnlocked={isNitroPro} />
+                          <img src={isNitroPro && msg.animatedAvatar ? msg.animatedAvatar : msg.senderAvatar} alt={msg.senderName} className="w-full h-full rounded-full object-cover relative z-10 hover:ring-2 hover:ring-purple-500 transition" />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-2xl z-50 w-60 text-white space-y-3">
+                          <div className="flex items-center gap-3">
+                            <img src={msg.senderAvatar} alt={msg.senderName} className="w-12 h-12 rounded-full object-cover ring-2 ring-purple-500" />
+                            <div>
+                              <div className="font-bold text-xs">{msg.senderName}</div>
+                              <div className="text-[10px] text-purple-400 font-mono">@member</div>
+                            </div>
+                          </div>
+                          <div className="text-[11px] text-slate-300 bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
+                            💬 Active in Discord Nitro Community
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => showToast(`Direct Messaging ${msg.senderName}...`)}
+                            className="w-full py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition cursor-pointer"
+                          >
+                            Send Direct Message
+                          </button>
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
 
                     <div className={`max-w-md space-y-1 ${msg.isMe ? 'items-end text-right' : ''}`}>
                       <div className="flex items-center gap-2 text-[10px] text-slate-400">
                         <span className="font-bold text-slate-700 dark:text-slate-300">{msg.senderName}</span>
                         <span>{msg.timestamp}</span>
-                        {msg.isEdited && <span className="text-[9px] italic text-slate-500">(edited)</span>}
+
+                        {/* Real-Time Message Status Delivery Indicators */}
+                        {msg.isMe && (
+                          <span className="ml-1 text-[10px]">
+                            {msg.status === 'sending' && <Clock className="w-3 h-3 text-amber-400 inline animate-spin" />}
+                            {msg.status === 'delivered' && <Check className="w-3 h-3 text-slate-400 inline" />}
+                            {msg.status === 'read' && <CheckCheck className="w-3 h-3 text-cyan-400 inline" />}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Reply Quote Banner if present */}
-                      {msg.replyTo && (
-                        <div className="text-[10px] p-2 rounded-lg bg-black/20 border-l-2 border-purple-400 text-purple-300 font-mono truncate">
-                          Replying to @{msg.replyTo.senderName}: "{msg.replyTo.text}"
-                        </div>
-                      )}
-
-                      {/* Message Bubble with Hover Action Bar */}
-                      <div className={`p-3.5 rounded-2xl text-xs leading-relaxed border relative shadow-xs group/msg ${
+                      {/* Message Bubble */}
+                      <div className={`p-3.5 rounded-2xl text-xs leading-relaxed border relative shadow-xs ${
                         msg.isMe 
                           ? 'bg-purple-600 text-white border-purple-500' 
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-200/80 dark:border-slate-700/60'
                       }`}>
-                        
-                        {/* FLOATING ACTION TOOLBAR ON HOVER */}
-                        <div className={`absolute top-0 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition z-20 flex items-center gap-1 bg-slate-900 text-white px-2 py-1 rounded-xl shadow-xl border border-slate-700 ${
-                          msg.isMe ? 'right-2' : 'left-2'
-                        }`}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReplyQuote({ id: msg.id, senderName: msg.senderName, text: msg.text });
-                              showToast(`Replying to @${msg.senderName}`);
-                            }}
-                            className="p-1 hover:text-purple-400 cursor-pointer"
-                            title="Quote Reply"
-                          >
-                            <Reply className="w-3.5 h-3.5" />
-                          </button>
-
-                          {msg.isMe && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingMessageId(msg.id);
-                                setInputText(msg.text);
-                              }}
-                              className="p-1 hover:text-cyan-400 cursor-pointer"
-                              title="Edit Message"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setChats(prev => prev.map(c => c.id === activeChat.id ? { ...c, messages: c.messages.filter(m => m.id !== msg.id) } : c));
-                              showToast('Message deleted');
-                            }}
-                            className="p-1 hover:text-rose-400 cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
                         <p>{msg.text}</p>
 
                         {/* File Attachment Card */}
@@ -844,24 +784,48 @@ export function ChatListCard({
                       </div>
                     </div>
 
+                    {/* Hover Reaction & Quick Action Bar */}
+                    <div className="hidden group-hover:flex items-center gap-1 bg-slate-900 text-white p-1 rounded-xl shadow-lg border border-slate-800 text-[10px] absolute -top-3 right-4 z-20">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          triggerSuperReactionBlast(e);
+                          handleAddReactionToMessage(msg.id, '⚡🌟', true);
+                        }}
+                        className="p-1 hover:bg-slate-800 rounded text-amber-400 font-bold cursor-pointer"
+                        title="Add Super Reaction"
+                      >
+                        ⚡🌟
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddReactionToMessage(msg.id, '❤️')}
+                        className="p-1 hover:bg-slate-800 rounded cursor-pointer"
+                        title="Add Heart Reaction"
+                      >
+                        ❤️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(msg.text);
+                          showToast('Message text copied to clipboard!');
+                        }}
+                        className="p-1 hover:bg-slate-800 rounded text-slate-300 cursor-pointer"
+                        title="Copy Message"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+
                   </div>
                 );
               })}
             </div>
 
-            {/* CHAT INPUT BAR WITH REPLY BANNER & DRAWERS */}
+            {/* CHAT INPUT BAR WITH EMOJI & SOUNDBOARD DRAWERS */}
             <div className="p-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-2">
               
-              {/* Active Quote Reply Banner */}
-              {replyQuote && (
-                <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-between text-xs text-purple-200">
-                  <span>Replying to @{replyQuote.senderName}: "{replyQuote.text}"</span>
-                  <button type="button" onClick={() => setReplyQuote(null)} className="p-1 hover:text-white cursor-pointer">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
               <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
                 
                 {/* File Upload Button */}
@@ -962,7 +926,7 @@ export function ChatListCard({
 
                 <input
                   type="text"
-                  placeholder={editingMessageId ? "Edit your message..." : `Message #${activeChat.name}... (${subscriptionTier.toUpperCase()} Mode)`}
+                  placeholder={`Message #${activeChat.name}... (${subscriptionTier.toUpperCase()} Mode)`}
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   className="flex-1 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-purple-500 font-medium"
@@ -973,7 +937,7 @@ export function ChatListCard({
                   className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  <span className="hidden sm:inline">{editingMessageId ? 'Save' : 'Send'}</span>
+                  <span className="hidden sm:inline">Send</span>
                 </button>
 
               </form>
@@ -1004,8 +968,8 @@ export function ChatListCard({
               <div className="space-y-3">
                 {[
                   { id: 'free', name: 'Free Tier', price: '$0', desc: 'Standard chat list, max 8MB uploads' },
-                  { id: 'nitro_basic', name: 'Nitro Basic', price: '$2.99/mo', desc: 'Custom Nitro Emojis & HSL Themes, 50MB uploads' },
-                  { id: 'nitro_pro', name: 'Nitro Pro (Full Nitro)', price: '$9.99/mo', desc: 'Animated GIF Avatars, HD 60FPS Calls, Super Reactions, Soundboard clips, 500MB uploads' }
+                  { id: 'nitro_basic', name: 'Nitro Basic', price: '$2.99/mo', desc: 'Custom Nitro Emojis everywhere, 50MB uploads' },
+                  { id: 'nitro_pro', name: 'Nitro Pro (Full Nitro)', price: '$9.99/mo', desc: 'Animated GIF Avatars, Super Reactions, Soundboard clips, 500MB uploads' }
                 ].map(plan => {
                   const isSelected = subscriptionTier === plan.id;
                   return (

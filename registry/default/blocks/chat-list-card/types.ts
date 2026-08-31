@@ -1,13 +1,5 @@
 export type SubscriptionTier = 'free' | 'nitro_basic' | 'nitro_pro';
 
-export type ChatTheme = 
-  | 'default'
-  | 'synthwave_neon'
-  | 'cyber_emerald'
-  | 'solar_gold'
-  | 'midnight_obsidian'
-  | 'sakura_dream';
-
 export type AvatarDecoration = 
   | 'none' 
   | 'anime_power_aura' 
@@ -33,10 +25,12 @@ export interface MessageAttachment {
   soundEmoji?: string;
 }
 
-export interface ReplyQuote {
-  id: string;
-  senderName: string;
-  text: string;
+export interface LinkPreview {
+  title: string;
+  url: string;
+  domain: string;
+  description?: string;
+  thumbnail?: string;
 }
 
 export interface Message {
@@ -49,14 +43,13 @@ export interface Message {
   text: string;
   timestamp: string;
   isMe?: boolean;
-  status?: 'sent' | 'delivered' | 'read';
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
   reactions?: MessageReaction[];
   attachment?: MessageAttachment;
+  linkPreview?: LinkPreview;
   isNitroSticker?: boolean;
   isNitroSoundboard?: boolean;
-  replyTo?: ReplyQuote;
   isPinned?: boolean;
-  isEdited?: boolean;
 }
 
 export interface ChatItem {
@@ -71,6 +64,8 @@ export interface ChatItem {
   isOnline?: boolean;
   isPinned?: boolean;
   statusText?: string;
+  category?: 'dm' | 'channel';
+  serverIcon?: string;
   messages: Message[];
 }
 
