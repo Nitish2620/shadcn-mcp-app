@@ -27,11 +27,8 @@ import {
   Mic,
   Square,
   Play,
-  Pause,
   Palette,
-  Sticker,
-  Flame,
-  Zap
+  Sticker
 } from 'lucide-react';
 import type { 
   ChatItem, 
