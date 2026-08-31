@@ -36,10 +36,7 @@ import {
   Upload,
   Camera,
   Gamepad2,
-  Play,
-  Pause,
   Server,
-  UserCheck,
   Radio
 } from 'lucide-react';
 import type { 
