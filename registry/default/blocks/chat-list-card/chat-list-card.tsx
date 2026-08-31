@@ -16,7 +16,11 @@ import {
   Crown,
   SmilePlus,
   Music,
-  FileText
+  FileText,
+  Palette,
+  Mic,
+  Tv,
+  Download
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -25,10 +29,12 @@ import type {
   MessageAttachment, 
   MessageReaction, 
   SubscriptionTier, 
-  AvatarDecoration 
+  AvatarDecoration,
+  AppTheme,
+  StreamQuality
 } from './types';
 
-export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration };
+export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, AvatarDecoration, AppTheme, StreamQuality };
 
 /* ========================================================
    INDEXEDDB PERSISTENCE ENGINE FOR DISCORD CHAT LIST
@@ -82,6 +88,54 @@ async function idbLoadChats(key: string): Promise<any> {
     return null;
   }
 }
+
+/* ========================================================
+   DISCORD NITRO THEME ACCENT PALETTES
+======================================================== */
+const THEME_STYLES: Record<AppTheme, { name: string; ring: string; border: string; badge: string; bgGlow: string }> = {
+  midnight_purple: {
+    name: 'Midnight Purple',
+    ring: 'ring-purple-500',
+    border: 'border-purple-500/40',
+    badge: 'from-purple-600 to-indigo-600',
+    bgGlow: 'shadow-[0_0_40px_rgba(168,85,247,0.25)]'
+  },
+  synthwave_cyan: {
+    name: 'Synthwave Cyan',
+    ring: 'ring-cyan-400',
+    border: 'border-cyan-400/40',
+    badge: 'from-cyan-500 to-blue-600',
+    bgGlow: 'shadow-[0_0_40px_rgba(34,211,238,0.25)]'
+  },
+  crimson_red: {
+    name: 'Crimson Red',
+    ring: 'ring-rose-500',
+    border: 'border-rose-500/40',
+    badge: 'from-rose-600 to-red-600',
+    bgGlow: 'shadow-[0_0_40px_rgba(244,63,94,0.25)]'
+  },
+  solar_amber: {
+    name: 'Solar Amber',
+    ring: 'ring-amber-400',
+    border: 'border-amber-400/40',
+    badge: 'from-amber-500 to-orange-600',
+    bgGlow: 'shadow-[0_0_40px_rgba(251,191,36,0.25)]'
+  },
+  emerald_matrix: {
+    name: 'Emerald Matrix',
+    ring: 'ring-emerald-400',
+    border: 'border-emerald-400/40',
+    badge: 'from-emerald-500 to-teal-600',
+    bgGlow: 'shadow-[0_0_40px_rgba(52,211,153,0.25)]'
+  },
+  sakura_pink: {
+    name: 'Sakura Pink',
+    ring: 'ring-pink-400',
+    border: 'border-pink-400/40',
+    badge: 'from-pink-500 to-rose-500',
+    bgGlow: 'shadow-[0_0_40px_rgba(244,114,182,0.25)]'
+  }
+};
 
 /* ========================================================
    DISCORD NITRO CUSTOM EMOJIS & ANIMATED STICKERS CATALOG
@@ -144,7 +198,7 @@ const INITIAL_CHATS: ChatItem[] = [
         isMe: true, 
         status: 'read', 
         reactions: [
-          { emoji: '⚡🌟', count: 4, users: ['1'], isSuperReaction: true }
+          { emoji: '⚡🌟', count: 4, users: ['1'], isSuperReaction: true, superReactionType: 'hype' }
         ] 
       },
       { 
@@ -225,10 +279,12 @@ export function ChatListCard({
   title = "Discord Nitro Channels & DMs",
   chats: initialChatsProp,
   initialSubscriptionTier = 'nitro_pro',
+  initialTheme = 'midnight_purple',
   onSelectChat,
   onNewChat
 }: ChatListCardProps) {
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>(initialSubscriptionTier);
+  const [theme, setTheme] = useState<AppTheme>(initialTheme);
   const [chats, setChats] = useState<ChatItem[]>(initialChatsProp || INITIAL_CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || '1');
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,15 +292,19 @@ export function ChatListCard({
   const [notification, setNotification] = useState<string | null>(null);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   
   // Super Reaction Burst Particles
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [particles, setParticles] = useState<{ id: number; x: number; y: number; char: string }[]>([]);
 
   // Soundboard Active Playing Animation State
   const [playingSoundId, setPlayingSoundId] = useState<string | null>(null);
 
   const isNitroPro = subscriptionTier === 'nitro_pro';
   const isNitroBasic = subscriptionTier === 'nitro_basic' || isNitroPro;
+
+  // Theme configuration object
+  const currentThemeConfig = THEME_STYLES[theme] || THEME_STYLES.midnight_purple;
 
   // Selected Active Chat Object
   const activeChat = useMemo(() => chats.find(c => c.id === selectedChatId) || chats[0], [chats, selectedChatId]);
@@ -280,6 +340,7 @@ export function ChatListCard({
       if (stored) {
         if (stored.chats) setChats(stored.chats);
         if (stored.subscriptionTier) setSubscriptionTier(stored.subscriptionTier);
+        if (stored.theme) setTheme(stored.theme);
       }
     });
   }, []);
@@ -287,18 +348,20 @@ export function ChatListCard({
   // Auto-Save to IndexedDB
   useEffect(() => {
     const handler = setTimeout(() => {
-      idbSaveChats('discordChatListState', { chats, subscriptionTier });
+      idbSaveChats('discordChatListState', { chats, subscriptionTier, theme });
     }, 500);
     return () => clearTimeout(handler);
-  }, [chats, subscriptionTier]);
+  }, [chats, subscriptionTier, theme]);
 
   // Super Reaction Trigger Particle Blast
-  const triggerSuperReactionBlast = useCallback((e: React.MouseEvent) => {
+  const triggerSuperReactionBlast = useCallback((e: React.MouseEvent, type: string = 'hype') => {
     const rect = e.currentTarget.getBoundingClientRect();
+    const chars = type === 'fire' ? ['🔥', '💥', '✨'] : type === 'heart' ? ['💖', '💕', '✨'] : type === 'matrix' ? ['⚡', '0', '1'] : ['⚡', '🌟', '💖', '🔥'];
     const newParticles = Array.from({ length: 18 }).map((_, i) => ({
       id: Date.now() + i,
       x: e.clientX - rect.left + (Math.random() * 80 - 40),
-      y: e.clientY - rect.top + (Math.random() * 80 - 40)
+      y: e.clientY - rect.top + (Math.random() * 80 - 40),
+      char: chars[i % chars.length]
     }));
     setParticles(prev => [...prev, ...newParticles]);
     setTimeout(() => {
@@ -403,7 +466,7 @@ export function ChatListCard({
 
   return (
     <Tooltip.Provider>
-      <div className="w-full max-w-6xl mx-auto font-sans selection:bg-purple-500 selection:text-white relative">
+      <div className={`w-full max-w-6xl mx-auto font-sans selection:bg-purple-500 selection:text-white relative transition-all duration-500 ${currentThemeConfig.bgGlow}`}>
         
         {/* Toast Notification Pill */}
         <AnimatePresence>
@@ -421,29 +484,137 @@ export function ChatListCard({
           )}
         </AnimatePresence>
 
-        {/* TOP DISCORD NITRO SUBSCRIPTION HEADER PILL */}
-        <div className="flex items-center justify-between gap-3 mb-3 px-2">
+        {/* TOP DISCORD NITRO SUBSCRIPTION HEADER PILL & THEME SELECTOR BAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 px-2">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-400 fill-amber-400" />
               {title}
             </h1>
+            <span className="text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+              IndexedDB Synced ✓ (12ms)
+            </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsSubscriptionModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition transform hover:scale-105 cursor-pointer"
-          >
-            <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-            <span>Active Plan: {subscriptionTier.toUpperCase()}</span>
-            <Sparkles className="w-3 h-3 text-amber-300" />
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            
+            {/* Nitro Custom App Theme Selector Popover */}
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Palette className="w-4 h-4 text-purple-500" />
+                  <span>Theme: {currentThemeConfig.name}</span>
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content className="bg-slate-900 border border-slate-800 p-3 rounded-2xl shadow-2xl z-50 w-64 space-y-2">
+                  <div className="text-xs font-bold text-white flex items-center justify-between">
+                    <span>Nitro Client Themes</span>
+                    <span className="text-[9px] font-mono text-purple-400">{isNitroPro ? 'UNLOCKED' : 'LOCKED'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(Object.keys(THEME_STYLES) as AppTheme[]).map(tKey => (
+                      <button
+                        key={tKey}
+                        type="button"
+                        onClick={() => {
+                          if (!isNitroPro) {
+                            showToast('🔒 Nitro Client Themes require Nitro Pro subscription');
+                            setIsSubscriptionModalOpen(true);
+                            return;
+                          }
+                          setTheme(tKey);
+                          playHapticSound(620);
+                          showToast(`Theme switched to ${THEME_STYLES[tKey].name}`);
+                        }}
+                        className={`p-2 rounded-xl text-left text-xs font-bold flex items-center justify-between cursor-pointer border transition ${
+                          theme === tKey ? 'border-purple-500 bg-purple-950/50 text-white' : 'border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>{THEME_STYLES[tKey].name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+
+            <button
+              type="button"
+              onClick={() => setIsSubscriptionModalOpen(true)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r ${currentThemeConfig.badge} text-white shadow-md transition transform hover:scale-105 cursor-pointer`}
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span>Plan: {subscriptionTier.toUpperCase()}</span>
+              <Sparkles className="w-3 h-3 text-amber-300" />
+            </button>
+
+          </div>
+        </div>
+
+        {/* VOICE CHANNEL & SOUNDBOARD LIVE STUDIO HEADER BAR */}
+        <div className="mb-3 px-4 py-2.5 bg-slate-900 text-white rounded-2xl border border-slate-800 flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+              <Mic className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span>Voice Connected: General Lounge (60 FPS HD)</span>
+            </div>
+
+            {/* Live 8-Bar Audio Frequency Equalizer Visualizer */}
+            <div className="hidden sm:flex items-center gap-0.5 h-4 px-2 bg-slate-950 rounded-md border border-slate-800">
+              {[40, 75, 100, 50, 90, 60, 80, 45].map((h, idx) => (
+                <motion.span
+                  key={`eq-${idx}`}
+                  animate={{ height: playingSoundId ? [`${h}%`, '20%', `${h}%`] : '30%' }}
+                  transition={{ repeat: Infinity, duration: 0.6, ease: 'easeInOut', delay: idx * 0.05 }}
+                  className="w-1 bg-gradient-to-t from-purple-500 to-emerald-400 rounded-full"
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <span className="text-purple-400 flex items-center gap-1">
+              <Tv className="w-3.5 h-3.5" />
+              {isNitroPro ? '1080p 60FPS 4K Source' : isNitroBasic ? '720p 60FPS' : '480p 30FPS'}
+            </span>
+          </div>
         </div>
 
         {/* MAIN CONTAINER: SIDEBAR CHAT LIST + CHAT THREAD VIEW */}
-        <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[720px] backdrop-blur-xl relative">
+        <div 
+          onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }}
+          onDragLeave={() => setIsDraggingFile(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDraggingFile(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              const sizeMb = file.size / (1024 * 1024);
+              const maxMb = subscriptionTier === 'nitro_pro' ? 500 : subscriptionTier === 'nitro_basic' ? 50 : 8;
+              if (sizeMb > maxMb) {
+                showToast(`❌ File size exceeds ${maxMb}MB limit!`);
+                setIsSubscriptionModalOpen(true);
+                return;
+              }
+              handleSendMessage(`Dropped file: ${file.name}`, { name: file.name, url: '', type: 'file', size: `${sizeMb.toFixed(1)} MB` });
+            }
+          }}
+          className={`bg-white/95 dark:bg-slate-900/95 border ${currentThemeConfig.border} rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[720px] backdrop-blur-xl relative transition-all duration-300`}
+        >
           
+          {/* Drag & Drop Overlay Zone */}
+          {isDraggingFile && (
+            <div className="absolute inset-0 z-50 bg-purple-950/80 backdrop-blur-md flex flex-col items-center justify-center text-white p-6 space-y-3 border-4 border-dashed border-purple-400 animate-in fade-in">
+              <Download className="w-12 h-12 text-purple-300 animate-bounce" />
+              <div className="text-lg font-black">Drop file to attach to #{activeChat.name}</div>
+              <div className="text-xs text-purple-200 font-mono">Max limit: {subscriptionTier === 'nitro_pro' ? '500MB' : subscriptionTier === 'nitro_basic' ? '50MB' : '8MB'}</div>
+            </div>
+          )}
+
           {/* Super Reaction Particle Explosion Burst Overlay */}
           {particles.map(p => (
             <motion.span
@@ -454,7 +625,7 @@ export function ChatListCard({
               className="absolute z-50 text-2xl pointer-events-none drop-shadow-[0_0_12px_rgba(251,191,36,0.9)]"
               style={{ left: p.x, top: p.y }}
             >
-              ⚡🌟🔥💖
+              {p.char}
             </motion.span>
           ))}
 
@@ -621,7 +792,7 @@ export function ChatListCard({
                                 key={`rx-${idx}`}
                                 type="button"
                                 onClick={(e) => {
-                                  if (rx.isSuperReaction) triggerSuperReactionBlast(e);
+                                  if (rx.isSuperReaction) triggerSuperReactionBlast(e, rx.superReactionType || 'hype');
                                   playHapticSound(600);
                                 }}
                                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border cursor-pointer ${
