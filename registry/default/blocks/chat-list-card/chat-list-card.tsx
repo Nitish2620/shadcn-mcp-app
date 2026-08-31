@@ -24,9 +24,7 @@ import {
   Palette,
   Reply,
   Edit2,
-  Trash2,
-  Check,
-  Zap
+  Trash2
 } from 'lucide-react';
 import type { 
   ChatItem, 
