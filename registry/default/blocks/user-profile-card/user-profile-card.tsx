@@ -864,6 +864,30 @@ export function UserProfileCard({
   // Super Reaction Burst Particles
   const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
 
+  // MNC Performance: Offscreen IntersectionObserver & Tab Visibility Engine
+  const [isScreenVisible, setIsScreenVisible] = useState(true);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsScreenVisible(entry.isIntersecting);
+    }, { threshold: 0.05 });
+
+    observer.observe(containerRef.current);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) setIsScreenVisible(false);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Settings Draft State
   const [editName, setEditName] = useState(profile.name);
   const [editHandle, setEditHandle] = useState(profile.handle);
@@ -881,15 +905,15 @@ export function UserProfileCard({
   // Feature Lock Helpers
   const isNitroPro = subscriptionTier === 'nitro_pro';
 
-  // Theme Class Map
+  // Theme Ambient Backlight Glow Map
   const themeClasses = useMemo(() => {
     switch (profileTheme) {
-      case 'synthwave_neon': return 'border-pink-500/90 shadow-pink-500/30';
-      case 'nitro_pink': return 'border-pink-500/80 shadow-pink-500/20';
-      case 'cyber_emerald': return 'border-emerald-500/80 shadow-emerald-500/20';
-      case 'solar_gold': return 'border-amber-500/80 shadow-amber-500/20';
-      case 'midnight_obsidian': return 'border-slate-700 shadow-slate-900/60';
-      default: return 'border-purple-500/80 shadow-purple-500/20';
+      case 'synthwave_neon': return 'border-pink-500/90 shadow-[0_0_50px_rgba(236,72,153,0.35)]';
+      case 'nitro_pink': return 'border-pink-500/80 shadow-[0_0_45px_rgba(236,72,153,0.3)]';
+      case 'cyber_emerald': return 'border-emerald-500/80 shadow-[0_0_45px_rgba(52,211,153,0.3)]';
+      case 'solar_gold': return 'border-amber-500/80 shadow-[0_0_45px_rgba(251,191,36,0.3)]';
+      case 'midnight_obsidian': return 'border-slate-700 shadow-[0_0_45px_rgba(30,41,59,0.7)]';
+      default: return 'border-purple-500/80 shadow-[0_0_50px_rgba(168,85,247,0.35)]';
     }
   }, [profileTheme]);
 
@@ -1232,30 +1256,19 @@ export function UserProfileCard({
         </div>
 
         {/* MAIN PROFILE CARD WITH DYNAMIC HSL THEME & PROFILE EFFECTS */}
-        <div className={`bg-white dark:bg-slate-900 border rounded-3xl overflow-hidden shadow-2xl transition-all relative ${
-          isNitroPro ? themeClasses : 'border-slate-200 dark:border-slate-800'
-        }`}>
+        <div 
+          ref={containerRef}
+          className={`bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border rounded-3xl overflow-hidden shadow-2xl transition-all relative ${
+            isNitroPro ? themeClasses : 'border-slate-200 dark:border-slate-800'
+          }`}
+        >
           
           {/* Full Nitro Programmatic Profile Effect (Magic Spells, Glitch, Cosmic Void, Lightning, HypeSquad, Retrowave) */}
-          <ProfileEffectOverlay effect={profile.profileEffect || 'hypesquad_explosion'} isUnlocked={isNitroPro} />
-
-          {/* Animated Particles Explosion Overlay */}
-          {particles.map(p => (
-            <motion.span
-              key={p.id}
-              initial={{ scale: 1, opacity: 1 }}
-              animate={{ y: -70, opacity: 0, scale: 1.8 }}
-              transition={{ duration: 0.9 }}
-              className="absolute z-50 text-xl pointer-events-none"
-              style={{ left: p.x, top: p.y }}
-            >
-              ✨🚀👑⚡
-            </motion.span>
-          ))}
+          <ProfileEffectOverlay effect={profile.profileEffect || 'hypesquad_explosion'} isUnlocked={isNitroPro && isScreenVisible} />
 
           {/* COVER BANNER SECTION WITH ANIMATED GIF/MP4 BANNER */}
           <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-slate-950">
-            <BannerEffectOverlay effect={profile.bannerEffect} isUnlocked={isNitroPro} />
+            <BannerEffectOverlay effect={profile.bannerEffect} isUnlocked={isNitroPro && isScreenVisible} />
             <img
               src={isNitroPro && profile.animatedBanner ? profile.animatedBanner : currentBanner}
               alt="Profile Cover Banner"
