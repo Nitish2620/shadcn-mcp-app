@@ -1030,7 +1030,10 @@ export function UserProfileCard({
     showToast(`Subscribed to ${plan?.name}! Features Unlocked & Saved to IndexedDB 🚀`);
   }, [playHapticSound, showToast]);
 
-  // Soundboard Player with Gating
+  // Soundboard Active Playing Animation State
+  const [playingSoundId, setPlayingSoundId] = useState<string | null>(null);
+
+  // Soundboard Player with Gating & Waveform Equalizer
   const playSoundboardClip = useCallback((sound: NitroSound) => {
     if (!isNitroPro && sound.category === 'Nitro Special') {
       showToast('🔒 Soundboard locked! Upgrade to Nitro Pro to unlock audio clips');
@@ -1038,6 +1041,8 @@ export function UserProfileCard({
       return;
     }
     playHapticSound(sound.freq, 'triangle');
+    setPlayingSoundId(sound.id);
+    setTimeout(() => setPlayingSoundId(null), 1800);
     showToast(`Played Soundboard: ${sound.emoji} ${sound.name}`);
   }, [isNitroPro, playHapticSound, showToast]);
 
@@ -1186,7 +1191,9 @@ export function UserProfileCard({
     { id: 's1', name: 'Cyberpunk Neon Wave', emoji: '🌌', rarity: 'Nitro Exclusive', animated: true },
     { id: 's2', name: 'Super Reaction Spark', emoji: '✨', rarity: 'Legendary', animated: true },
     { id: 's3', name: 'Golden Dragon Flame', emoji: '🐉', rarity: 'Legendary', animated: true },
-    { id: 's4', name: 'HypeSquad Events Badge', emoji: '⚡', rarity: 'Rare', animated: false }
+    { id: 's4', name: 'HypeSquad Bravery Badge', emoji: '⚡', rarity: 'Rare', animated: false },
+    { id: 's5', name: 'Active Developer Badge', emoji: '💻', rarity: 'Rare', animated: false },
+    { id: 's6', name: 'Early Supporter 2017', emoji: '👾', rarity: 'Nitro Exclusive', animated: true }
   ], []);
 
   const currentBanner = profileContext === 'server' ? (profile.serverBanner || profile.banner) : profile.banner;
@@ -2116,33 +2123,49 @@ export function UserProfileCard({
                 </div>
               </Tabs.Content>
 
-              {/* SOUNDBOARD TAB CONTENT */}
+              {/* SOUNDBOARD TAB CONTENT WITH AUDIO WAVEFORM EQUALIZER */}
               <Tabs.Content value="soundboard" className="outline-none">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {mockSoundboard.map(sound => (
-                    <button
-                      key={sound.id}
-                      type="button"
-                      onClick={() => playSoundboardClip(sound)}
-                      className={`p-4 rounded-2xl border flex items-center justify-between text-left transition cursor-pointer group ${
-                        sound.lockedForFree 
-                          ? 'bg-slate-100/60 dark:bg-slate-800/20 border-slate-200 dark:border-slate-800 opacity-60' 
-                          : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:border-purple-500/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl group-hover:scale-125 transition transform">{sound.emoji}</span>
-                        <div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1">
-                            {sound.name}
-                            {sound.lockedForFree && <Lock className="w-3 h-3 text-amber-500" />}
+                  {mockSoundboard.map(sound => {
+                    const isPlaying = playingSoundId === sound.id;
+                    return (
+                      <button
+                        key={sound.id}
+                        type="button"
+                        onClick={() => playSoundboardClip(sound)}
+                        className={`p-4 rounded-2xl border flex items-center justify-between text-left transition cursor-pointer group ${
+                          isPlaying
+                            ? 'bg-purple-900/40 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-102'
+                            : sound.lockedForFree 
+                            ? 'bg-slate-100/60 dark:bg-slate-800/20 border-slate-200 dark:border-slate-800 opacity-60' 
+                            : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:border-purple-500/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl group-hover:scale-125 transition transform">{sound.emoji}</span>
+                          <div>
+                            <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1">
+                              {sound.name}
+                              {sound.lockedForFree && <Lock className="w-3 h-3 text-amber-500" />}
+                            </div>
+                            <span className="text-[10px] font-semibold text-purple-500">{sound.category}</span>
                           </div>
-                          <span className="text-[10px] font-semibold text-purple-500">{sound.category}</span>
                         </div>
-                      </div>
-                      <Volume2 className="w-4 h-4 text-purple-400 group-hover:animate-bounce" />
-                    </button>
-                  ))}
+
+                        {/* Animated Equalizer Waveform Bars when Active */}
+                        {isPlaying ? (
+                          <div className="flex items-end gap-1 h-5">
+                            <motion.span animate={{ height: [4, 18, 6, 20, 4] }} transition={{ repeat: Infinity, duration: 0.4 }} className="w-1 bg-purple-400 rounded-full" />
+                            <motion.span animate={{ height: [16, 6, 20, 8, 16] }} transition={{ repeat: Infinity, duration: 0.35 }} className="w-1 bg-pink-400 rounded-full" />
+                            <motion.span animate={{ height: [8, 20, 4, 16, 8] }} transition={{ repeat: Infinity, duration: 0.45 }} className="w-1 bg-amber-400 rounded-full" />
+                            <motion.span animate={{ height: [18, 4, 14, 6, 18] }} transition={{ repeat: Infinity, duration: 0.38 }} className="w-1 bg-cyan-400 rounded-full" />
+                          </div>
+                        ) : (
+                          <Volume2 className="w-4 h-4 text-purple-400 group-hover:animate-bounce" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </Tabs.Content>
 
