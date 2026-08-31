@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as Tooltip from '@radix-ui/react-tooltip';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   Plus, 
@@ -24,11 +22,7 @@ import {
   SmilePlus,
   FileText,
   Crown,
-  Zap,
-  Music,
-  Lock,
-  Upload,
-  ShieldCheck
+  Music
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -442,7 +436,6 @@ export function ChatListCard({
   const [showNitroModal, setShowNitroModal] = useState(false);
   const [showNitroEmojiPicker, setShowNitroEmojiPicker] = useState(false);
   const [showNitroSoundPicker, setShowNitroSoundPicker] = useState(false);
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number }[]>([]);
 
   const isNitroPro = tier === 'nitro_pro';
   const isNitroBasic = tier === 'nitro_basic' || isNitroPro;
@@ -702,23 +695,6 @@ export function ChatListCard({
       return c;
     }));
   }, [selectedChat, playSoundEffect]);
-
-  // File Upload Selection Handler
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const isImg = file.type.startsWith('image/');
-    const url = URL.createObjectURL(file);
-    const sizeStr = `${(file.size / 1024 / 1024).toFixed(1)} MB`;
-
-    setDraftAttachment({
-      name: file.name,
-      url,
-      type: isImg ? 'image' : 'file',
-      size: sizeStr
-    });
-  };
 
   // Deep Logic: Send Message & Trigger AI Responder
   const handleSendMessage = useCallback((e: React.FormEvent) => {
