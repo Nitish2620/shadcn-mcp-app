@@ -34,7 +34,13 @@ import {
   Award,
   Palette,
   Upload,
-  Camera
+  Camera,
+  Gamepad2,
+  Play,
+  Pause,
+  Server,
+  UserCheck,
+  Radio
 } from 'lucide-react';
 import type { 
   UserProfileData, 
@@ -43,6 +49,7 @@ import type {
   BannerEffect, 
   ProfileEffect, 
   ProfileTheme,
+  UserStatus,
   SubscriptionTier, 
   SubscriptionPlan, 
   ProfileTab, 
@@ -50,10 +57,14 @@ import type {
   PostItem, 
   NitroSticker, 
   NitroSound,
-  ServerRole 
+  ServerRole,
+  SpotifyPresence,
+  GamePresence,
+  MutualServer,
+  MutualFriend
 } from './types';
 
-export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, ProfileTheme, SubscriptionTier, ProfileTab, ProfileContext, ServerRole };
+export type { UserProfileData, UserProfileCardProps, AvatarDecoration, BannerEffect, ProfileEffect, ProfileTheme, UserStatus, SubscriptionTier, ProfileTab, ProfileContext, ServerRole, SpotifyPresence, GamePresence, MutualServer, MutualFriend };
 
 /* ========================================================
    INDEXEDDB AUTO-PERSISTENCE ENGINE FOR PROFILE & SUBSCRIPTION
@@ -799,6 +810,7 @@ export function UserProfileCard({
     name: 'ram verma',
     handle: '@ram',
     verified: true,
+    userStatus: 'online',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     animatedAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
@@ -829,6 +841,33 @@ export function UserProfileCard({
       boostCount: 12,
       nextLevelBoosts: 14
     },
+    // Discord Live Rich Presence
+    spotifyPresence: {
+      song: 'Starboy',
+      artist: 'The Weeknd ft. Daft Punk',
+      albumArt: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&auto=format&fit=crop&q=80',
+      durationSeconds: 230,
+      currentSeconds: 134,
+      isPlaying: true
+    },
+    gamePresence: {
+      name: 'Visual Studio Code',
+      details: 'Editing user-profile-card.tsx',
+      state: 'Workspace: shadcn-mcp-app',
+      icon: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=100&auto=format&fit=crop&q=80',
+      elapsedTime: '01:42:15'
+    },
+    // Discord Mutual Servers & Mutual Friends
+    mutualServers: [
+      { id: 'ms1', name: 'Next.js Official Guild', icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80', memberCount: 142000, joinedDate: 'Jan 2021', mutualFriendsCount: 18 },
+      { id: 'ms2', name: 'React Developers Hub', icon: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=100&auto=format&fit=crop&q=80', memberCount: 98000, joinedDate: 'Mar 2022', mutualFriendsCount: 12 },
+      { id: 'ms3', name: 'Shadcn UI Community', icon: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&auto=format&fit=crop&q=80', memberCount: 64000, joinedDate: 'Dec 2023', mutualFriendsCount: 24 }
+    ],
+    mutualFriends: [
+      { id: 'mf1', name: 'Alex Rivera', handle: '@arivera', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', status: 'online', customStatus: '🚀 Shipping React components' },
+      { id: 'mf2', name: 'Sophia Chen', handle: '@sophia_dev', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80', status: 'dnd', customStatus: '⛔ Deep focus coding' },
+      { id: 'mf3', name: 'Marcus Vance', handle: '@mvance', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80', status: 'idle', customStatus: '🌙 AFK eating dinner' }
+    ],
     // Server Specific Profile & Server Level 1-3 Boost Overrides
     serverName: 'Next.js MNC Guild 🛡️',
     serverIcon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80',
@@ -1349,10 +1388,45 @@ export function UserProfileCard({
                     decoding="async"
                     className="w-full h-full rounded-full object-cover relative z-10"
                   />
-                  <span 
-                    className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 z-30 w-5 h-5 sm:w-6 sm:h-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full" 
-                    title="Online & Custom Status Active"
-                  />
+                  {/* Interactive Status Indicator Selector (Online 🟢, Idle 🌙, DND ⛔, Invisible ⚪) */}
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextStatus: Record<UserStatus, UserStatus> = {
+                            online: 'idle',
+                            idle: 'dnd',
+                            dnd: 'offline',
+                            offline: 'online'
+                          };
+                          const newStatus = nextStatus[profile.userStatus || 'online'];
+                          setProfile(p => ({ ...p, userStatus: newStatus }));
+                          playHapticSound(700);
+                          showToast(`Status changed to ${newStatus.toUpperCase()}`);
+                        }}
+                        className={`absolute bottom-1 right-1 sm:bottom-2 sm:right-2 z-30 w-6 h-6 sm:w-7 sm:h-7 border-4 border-white dark:border-slate-900 rounded-full flex items-center justify-center cursor-pointer transition transform hover:scale-110 shadow-md ${
+                          profile.userStatus === 'idle' 
+                            ? 'bg-amber-400' 
+                            : profile.userStatus === 'dnd' 
+                            ? 'bg-rose-500' 
+                            : profile.userStatus === 'offline' 
+                            ? 'bg-slate-500' 
+                            : 'bg-emerald-500'
+                        }`}
+                        aria-label="Change Status"
+                      >
+                        {profile.userStatus === 'idle' && <span className="text-[9px]">🌙</span>}
+                        {profile.userStatus === 'dnd' && <span className="text-[9px] font-black text-white">-</span>}
+                        {profile.userStatus === 'offline' && <span className="text-[8px] text-white">⚪</span>}
+                      </button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Portal>
+                      <Tooltip.Content className="bg-slate-900 text-white text-xs px-2.5 py-1 rounded-md shadow-lg z-50 font-bold">
+                        Click to cycle status: {profile.userStatus?.toUpperCase() || 'ONLINE'}
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
                 </div>
               </motion.div>
 
@@ -1865,6 +1939,66 @@ export function UserProfileCard({
                   </Tooltip.Portal>
                 </Tooltip.Root>
               ))}
+            {/* DISCORD LIVE RICH PRESENCE SECTION (SPOTIFY PLAYER & VS CODE ACTIVITY) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              
+              {/* Spotify Live Listening Card */}
+              {profile.spotifyPresence && (
+                <div className="bg-emerald-950/30 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-500/30 backdrop-blur-md relative overflow-hidden group">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                      Listening to Spotify
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-300 font-bold">LIVE</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <img src={profile.spotifyPresence.albumArt} alt={profile.spotifyPresence.song} className="w-12 h-12 rounded-xl object-cover shadow-md shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-xs text-white truncate">{profile.spotifyPresence.song}</div>
+                      <div className="text-[11px] text-emerald-200/80 truncate">{profile.spotifyPresence.artist}</div>
+                    </div>
+                  </div>
+
+                  {/* Animated Song Scrubber Progress Bar */}
+                  <div className="mt-3 space-y-1">
+                    <div className="h-1.5 bg-emerald-950/80 rounded-full overflow-hidden">
+                      <motion.div 
+                        animate={{ width: ['40%', '75%', '40%'] }} 
+                        transition={{ repeat: Infinity, duration: 8, ease: 'linear' }} 
+                        className="h-full bg-emerald-400 rounded-full" 
+                      />
+                    </div>
+                    <div className="flex justify-between text-[9px] font-mono text-emerald-300/80">
+                      <span>02:14</span>
+                      <span>03:50</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* VS Code Live Coding Activity Card */}
+              {profile.gamePresence && (
+                <div className="bg-blue-950/30 dark:bg-blue-950/40 p-4 rounded-2xl border border-blue-500/30 backdrop-blur-md relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                      <Gamepad2 className="w-3.5 h-3.5 text-blue-400" />
+                      Playing {profile.gamePresence.name}
+                    </span>
+                    <span className="text-[10px] font-mono text-blue-300 font-bold">{profile.gamePresence.elapsedTime}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <img src={profile.gamePresence.icon} alt={profile.gamePresence.name} className="w-12 h-12 rounded-xl object-cover shadow-md shrink-0 border border-blue-500/30" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-xs text-white truncate">{profile.gamePresence.details}</div>
+                      <div className="text-[11px] text-blue-200/80 truncate">{profile.gamePresence.state}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* METRICS & STATS CARDS GRID */}
@@ -1940,6 +2074,30 @@ export function UserProfileCard({
                   >
                     <Grid className="w-4 h-4" />
                     <span>Posts</span>
+                  </Tabs.Trigger>
+
+                  <Tabs.Trigger
+                    value="mutual_servers"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      activeTab === 'mutual_servers'
+                        ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-md'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Server className="w-4 h-4 text-cyan-500" />
+                    <span>Mutual Servers ({profile.mutualServers?.length || 0})</span>
+                  </Tabs.Trigger>
+
+                  <Tabs.Trigger
+                    value="mutual_friends"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      activeTab === 'mutual_friends'
+                        ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-md'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 text-emerald-500" />
+                    <span>Mutual Friends ({profile.mutualFriends?.length || 0})</span>
                   </Tabs.Trigger>
 
                   <Tabs.Trigger
@@ -2050,6 +2208,58 @@ export function UserProfileCard({
                     </div>
                   </div>
                 ))}
+              </Tabs.Content>
+
+              {/* DISCORD MUTUAL SERVERS TAB CONTENT */}
+              <Tabs.Content value="mutual_servers" className="outline-none space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {profile.mutualServers?.map(server => (
+                    <div key={server.id} className="bg-slate-50/80 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between transition hover:border-cyan-500/50">
+                      <div className="flex items-center gap-3">
+                        <img src={server.icon} alt={server.name} className="w-11 h-11 rounded-2xl object-cover ring-2 ring-cyan-500/40 shrink-0" />
+                        <div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white">{server.name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {server.memberCount.toLocaleString()} Members • Joined {server.joinedDate}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-cyan-500 bg-cyan-950/60 border border-cyan-500/30 px-2 py-1 rounded-full shrink-0">
+                        {server.mutualFriendsCount} Mutual
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Tabs.Content>
+
+              {/* DISCORD MUTUAL FRIENDS TAB CONTENT */}
+              <Tabs.Content value="mutual_friends" className="outline-none space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {profile.mutualFriends?.map(friend => (
+                    <div key={friend.id} className="bg-slate-50/80 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between transition hover:border-emerald-500/50">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0">
+                          <img src={friend.avatar} alt={friend.name} className="w-full h-full object-cover" />
+                          <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                            friend.status === 'dnd' ? 'bg-rose-500' : friend.status === 'idle' ? 'bg-amber-400' : 'bg-emerald-500'
+                          }`} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white">{friend.name}</div>
+                          <div className="text-[10px] text-purple-500 font-mono">{friend.handle}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => showToast(`Opening Direct Message with ${friend.name}...`)}
+                        className="p-2 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-400 hover:text-white transition cursor-pointer text-xs font-bold flex items-center gap-1"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Message</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </Tabs.Content>
 
               {/* SERVER BOOST LEVEL 1-3 PREVIEW TAB */}
@@ -2337,6 +2547,7 @@ export function UserProfileCard({
         </Dialog.Portal>
       </Dialog.Root>
 
+      </div>
     </Tooltip.Provider>
   );
 }

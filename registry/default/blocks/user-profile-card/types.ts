@@ -46,11 +46,22 @@ export type ProfileEffect =
 
 export type ProfileTheme = 'blurple' | 'nitro_pink' | 'cyber_emerald' | 'solar_gold' | 'midnight_obsidian' | 'synthwave_neon';
 
+export type UserStatus = 'online' | 'idle' | 'dnd' | 'offline';
+
 export type NitroLevel = 'none' | 'level1' | 'level2' | 'level3';
 
 export type SubscriptionTier = 'free' | 'nitro_basic' | 'nitro_pro';
 
-export type ProfileTab = 'posts' | 'media' | 'collectibles' | 'likes' | 'soundboard' | 'subscription' | 'server_preview';
+export type ProfileTab = 
+  | 'posts' 
+  | 'activity' 
+  | 'mutual_servers' 
+  | 'mutual_friends' 
+  | 'media' 
+  | 'collectibles' 
+  | 'soundboard' 
+  | 'subscription' 
+  | 'server_preview';
 
 export type ProfileContext = 'global' | 'server';
 
@@ -79,6 +90,42 @@ export interface ServerRole {
   name: string;
   colorGradient: string;
   animated: boolean;
+}
+
+export interface SpotifyPresence {
+  song: string;
+  artist: string;
+  albumArt: string;
+  durationSeconds: number;
+  currentSeconds: number;
+  isPlaying: boolean;
+}
+
+export interface GamePresence {
+  name: string;
+  details: string;
+  state: string;
+  icon: string;
+  elapsedTime: string;
+  partySize?: string;
+}
+
+export interface MutualServer {
+  id: string;
+  name: string;
+  icon: string;
+  memberCount: number;
+  joinedDate: string;
+  mutualFriendsCount: number;
+}
+
+export interface MutualFriend {
+  id: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  status: UserStatus;
+  customStatus?: string;
 }
 
 export interface UserProfileStats {
@@ -124,6 +171,7 @@ export interface UserProfileData {
   name: string;
   handle: string;
   verified?: boolean;
+  userStatus: UserStatus;
   avatar: string;
   animatedAvatar?: string;
   banner: string;
@@ -142,6 +190,10 @@ export interface UserProfileData {
   subscriptionTier: SubscriptionTier;
   badges: ProfileBadge[];
   stats: UserProfileStats;
+  spotifyPresence?: SpotifyPresence;
+  gamePresence?: GamePresence;
+  mutualServers?: MutualServer[];
+  mutualFriends?: MutualFriend[];
   // Server-Specific Profile Overrides
   serverName?: string;
   serverIcon?: string;
