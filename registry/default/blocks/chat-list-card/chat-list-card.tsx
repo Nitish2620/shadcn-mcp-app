@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   Plus, 
@@ -22,7 +23,15 @@ import {
   SmilePlus,
   FileText,
   Crown,
-  Music
+  Music,
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Palette,
+  Sticker,
+  Flame,
+  Zap
 } from 'lucide-react';
 import type { 
   ChatItem, 
@@ -32,15 +41,48 @@ import type {
   MessageReaction,
   SubscriptionTier,
   NitroCustomEmoji,
-  NitroSoundClip
+  NitroSoundClip,
+  ChatTheme,
+  ChatThemeId,
+  NitroSticker,
+  VoiceNote
 } from './types';
 
-export type { ChatItem, ChatListCardProps, Message, MessageAttachment, MessageReaction, SubscriptionTier, NitroCustomEmoji, NitroSoundClip };
+export type { 
+  ChatItem, 
+  ChatListCardProps, 
+  Message, 
+  MessageAttachment, 
+  MessageReaction, 
+  SubscriptionTier, 
+  NitroCustomEmoji, 
+  NitroSoundClip,
+  ChatTheme,
+  ChatThemeId,
+  NitroSticker,
+  VoiceNote
+};
 
 const ITEM_HEIGHT = 68; // Height of each chat row in px
 const MSG_HEIGHT = 80;  // Height of each message bubble in px
 
 const REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+
+const CHAT_THEMES: ChatTheme[] = [
+  { id: 'default', name: 'Discord Slate', gradient: 'from-slate-900 via-slate-900 to-slate-900', cardBg: 'bg-white dark:bg-slate-900', textAccent: 'text-blue-500', isNitroOnly: false },
+  { id: 'synthwave', name: 'Synthwave Neon', gradient: 'from-purple-950 via-slate-900 to-pink-950', cardBg: 'bg-purple-950/60 dark:bg-purple-950/80', textAccent: 'text-pink-400', isNitroOnly: true },
+  { id: 'emerald', name: 'Cyber Emerald', gradient: 'from-emerald-950 via-slate-900 to-teal-950', cardBg: 'bg-emerald-950/60 dark:bg-emerald-950/80', textAccent: 'text-emerald-400', isNitroOnly: true },
+  { id: 'obsidian', name: 'Midnight Obsidian', gradient: 'from-slate-950 via-black to-slate-950', cardBg: 'bg-slate-950 dark:bg-black', textAccent: 'text-cyan-400', isNitroOnly: true },
+  { id: 'solar', name: 'Solar Gold', gradient: 'from-amber-950 via-slate-900 to-orange-950', cardBg: 'bg-amber-950/60 dark:bg-amber-950/80', textAccent: 'text-amber-400', isNitroOnly: true },
+  { id: 'sakura', name: 'Sakura Moonlight', gradient: 'from-rose-950 via-slate-900 to-indigo-950', cardBg: 'bg-rose-950/60 dark:bg-rose-950/80', textAccent: 'text-rose-400', isNitroOnly: true }
+];
+
+const NITRO_STICKERS: NitroSticker[] = [
+  { id: 'st1', name: 'Wumpus Hype', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80', category: 'Wumpus', isNitroOnly: false },
+  { id: 'st2', name: 'Clyde Dance', image: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=120&auto=format&fit=crop&q=80', category: 'Clyde', isNitroOnly: true },
+  { id: 'st3', name: 'Nitro Flame', image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=120&auto=format&fit=crop&q=80', category: 'Nitro', isNitroOnly: true },
+  { id: 'st4', name: 'Hyper Cat', image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=120&auto=format&fit=crop&q=80', category: 'Meme', isNitroOnly: true }
+];
 
 const NITRO_EMOJIS: NitroCustomEmoji[] = [
   { id: 'ne1', name: 'Nitro Boost', emoji: '🚀', category: 'Nitro Exclusive', animated: true, isNitroOnly: true },
@@ -296,6 +338,42 @@ const MessageBubble = React.memo(({
             </div>
           )}
 
+          {/* Nitro 3D Sticker if attached */}
+          {msg.sticker && (
+            <div className="mb-2 p-2 rounded-2xl bg-purple-950/30 border border-purple-500/30 flex flex-col items-center">
+              <img src={msg.sticker.image} alt={msg.sticker.name} className="w-24 h-24 object-cover rounded-xl shadow-lg animate-pulse" />
+              <span className="text-[10px] font-extrabold text-purple-400 mt-1">{msg.sticker.name} (Nitro Sticker)</span>
+            </div>
+          )}
+
+          {/* Voice Note Audio Waveform Player if attached */}
+          {msg.voiceNote && (
+            <div className="mb-2 p-3 rounded-2xl bg-slate-900/90 text-white border border-slate-700/60 flex items-center gap-3 w-56">
+              <button 
+                type="button"
+                className="w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-500 flex items-center justify-center text-white shrink-0 cursor-pointer shadow-md"
+              >
+                <Play className="w-4 h-4 fill-white ml-0.5" />
+              </button>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-end gap-1 h-5 px-1">
+                  {msg.voiceNote.waveform.map((h, i) => (
+                    <motion.span 
+                      key={i}
+                      animate={{ height: [`${h}%`, `${Math.max(20, h * 0.5)}%`, `${h}%`] }}
+                      transition={{ repeat: Infinity, duration: 1.2, delay: i * 0.1 }}
+                      className="w-1 bg-purple-400 rounded-full"
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-between text-[9px] font-mono text-purple-300">
+                  <span>Voice Note</span>
+                  <span>{msg.voiceNote.duration}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <p className="leading-relaxed break-words flex items-center gap-1">
             {msg.text}
             {msg.nitroCustomEmoji && <span className="text-lg animate-pulse">{msg.nitroCustomEmoji}</span>}
@@ -433,12 +511,37 @@ export function ChatListCard({
   const [chatList, setChatList] = useState<ChatItem[]>(chats);
   const [selectedChatId, setSelectedChatId] = useState<string | null>('1');
   const [tier, setTier] = useState<SubscriptionTier>(initialTier);
+  const [activeTheme, setActiveTheme] = useState<ChatThemeId>('synthwave');
   const [showNitroModal, setShowNitroModal] = useState(false);
   const [showNitroEmojiPicker, setShowNitroEmojiPicker] = useState(false);
   const [showNitroSoundPicker, setShowNitroSoundPicker] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+
+  // Voice Note Recording State
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSecs, setRecordingSecs] = useState(0);
+
+  // Super Reaction Particle Engine State
+  const [superParticles, setSuperParticles] = useState<{ id: number; x: number; y: number; emoji: string }[]>([]);
 
   const isNitroPro = tier === 'nitro_pro';
   const isNitroBasic = tier === 'nitro_basic' || isNitroPro;
+
+  const currentThemeObj = useMemo(() => 
+    CHAT_THEMES.find(t => t.id === activeTheme) || CHAT_THEMES[0],
+  [activeTheme]);
+
+  // Voice Recording Timer Effect
+  useEffect(() => {
+    let interval: any = null;
+    if (isRecordingVoice) {
+      interval = setInterval(() => setRecordingSecs(s => s + 1), 1000);
+    } else {
+      setRecordingSecs(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecordingVoice]);
 
   const selectedChat = useMemo(() => 
     chatList.find(c => c.id === selectedChatId) || chatList[0],
@@ -660,10 +763,23 @@ export function ChatListCard({
     };
   }, [selectedChat?.messages, msgScrollTop]);
 
+  // Super Reaction Particle Explosion Generator
+  const triggerSuperParticles = useCallback((emoji: string) => {
+    const newParticles = Array.from({ length: 16 }).map((_, i) => ({
+      id: Date.now() + i + Math.random(),
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 70 + 15,
+      emoji
+    }));
+    setSuperParticles(newParticles);
+    setTimeout(() => setSuperParticles([]), 1800);
+  }, []);
+
   // Deep Logic: Message Emoji Reaction Toggle Handler
   const handleToggleReaction = useCallback((msgId: string, emoji: string) => {
     if (!selectedChat) return;
     playSoundEffect('pop');
+    triggerSuperParticles(emoji);
 
     setChatList(prev => prev.map(c => {
       if (c.id === selectedChat.id) {
@@ -684,7 +800,7 @@ export function ChatListCard({
                 newReactions = currentReactions.map(x => x.emoji === emoji ? { ...x, count: x.count + 1, users: [...x.users, 'me'] } : x);
               }
             } else {
-              newReactions = [...currentReactions, { emoji, count: 1, users: ['me'] }];
+              newReactions = [...currentReactions, { emoji, count: 1, users: ['me'], isSuperReaction: true }];
             }
             return { ...m, reactions: newReactions };
           }
@@ -694,7 +810,7 @@ export function ChatListCard({
       }
       return c;
     }));
-  }, [selectedChat, playSoundEffect]);
+  }, [selectedChat, playSoundEffect, triggerSuperParticles]);
 
   // Deep Logic: Send Message & Trigger AI Responder
   const handleSendMessage = useCallback((e: React.FormEvent) => {
@@ -967,11 +1083,30 @@ export function ChatListCard({
         </div>
 
         {/* Right Side: Active Messenger Thread Card */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between h-full relative">
+        <div className={`lg:col-span-7 ${currentThemeObj.cardBg} border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col justify-between h-full relative overflow-hidden transition-all duration-500`}>
+          
+          {/* Super Reaction Particle Canvas Overlay */}
+          <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
+            <AnimatePresence>
+              {superParticles.map(p => (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 1, scale: 0.5, x: `${p.x}%`, y: `${p.y}%` }}
+                  animate={{ opacity: 0, scale: 2.2, y: `${p.y - 35}%`, rotate: Math.random() * 360 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 1.6, ease: 'easeOut' }}
+                  className="absolute text-3xl select-none"
+                >
+                  {p.emoji}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
           {selectedChat ? (
             <>
               {/* Header Bar */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 relative shrink-0">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800/80 relative shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-11 h-11" />
@@ -989,8 +1124,55 @@ export function ChatListCard({
                 </div>
 
                 <div className="flex items-center gap-1 text-slate-400" ref={contextMenuRef}>
+                  {/* Nitro Chat Color Theme Picker Trigger */}
+                  <button 
+                    type="button" 
+                    onClick={() => setShowThemePicker(!showThemePicker)} 
+                    aria-label="Change Chat Theme" 
+                    className="p-2 hover:text-purple-400 transition cursor-pointer"
+                  >
+                    <Palette className="w-4.5 h-4.5 text-purple-400" />
+                  </button>
+
                   <button type="button" onClick={() => showToast(`Calling ${selectedChat.name}... 📞`)} aria-label="Call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Phone className="w-4.5 h-4.5" /></button>
                   <button type="button" onClick={() => showToast(`Starting video call with ${selectedChat.name}... 📹`)} aria-label="Video call contact" className="p-2 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"><Video className="w-4.5 h-4.5" /></button>
+
+                  {/* Nitro Chat Theme Popover */}
+                  {showThemePicker && (
+                    <div className="absolute top-12 right-12 z-50 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-2.5 space-y-2 animate-in fade-in zoom-in-95">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                        <span>Nitro Chat Themes</span>
+                        <button type="button" onClick={() => setShowThemePicker(false)} className="text-slate-400"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                      <div className="space-y-1">
+                        {CHAT_THEMES.map(t => {
+                          const isLocked = t.isNitroOnly && !isNitroPro;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                if (isLocked) {
+                                  showToast('🔒 Nitro Pro required for Custom Chat Themes!');
+                                  setShowNitroModal(true);
+                                } else {
+                                  setActiveTheme(t.id);
+                                  setShowThemePicker(false);
+                                  showToast(`Applied ${t.name} Chat Theme 🎨`);
+                                }
+                              }}
+                              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between transition cursor-pointer ${
+                                activeTheme === t.id ? 'bg-purple-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                              }`}
+                            >
+                              <span>{t.name}</span>
+                              {isLocked && <Crown className="w-3 h-3 text-amber-400" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* THREE DOTS CONTEXT MENU */}
                   <button 
@@ -1183,6 +1365,56 @@ export function ChatListCard({
                   </div>
                 )}
 
+                {/* Nitro 3D Sticker Picker Popover */}
+                {showStickerPicker && (
+                  <div className="absolute bottom-16 right-32 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl p-3 w-64 space-y-2 animate-in fade-in zoom-in-95">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white pb-1 border-b border-slate-100 dark:border-slate-800">
+                      <span className="flex items-center gap-1">
+                        <Sticker className="w-3.5 h-3.5 text-pink-500" />
+                        Nitro 3D Stickers
+                      </span>
+                      <button type="button" onClick={() => setShowStickerPicker(false)} className="text-slate-400 hover:text-slate-600"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {NITRO_STICKERS.map(sticker => {
+                        const isLocked = sticker.isNitroOnly && !isNitroBasic;
+                        return (
+                          <button
+                            key={sticker.id}
+                            type="button"
+                            onClick={() => {
+                              if (isLocked) {
+                                showToast('🔒 Nitro required for 3D Stickers!');
+                                setShowNitroModal(true);
+                              } else {
+                                playSoundEffect('send');
+                                const newMsg: Message = {
+                                  id: Date.now().toString(),
+                                  senderId: 'me',
+                                  senderName: 'You',
+                                  text: `Sent a sticker: ${sticker.name}`,
+                                  timestamp: 'Just now',
+                                  isMe: true,
+                                  status: 'read',
+                                  sticker
+                                };
+                                setChatList(prev => prev.map(c => c.id === selectedChat.id ? { ...c, lastMessage: newMsg.text, messages: [...c.messages, newMsg] } : c));
+                                setShowStickerPicker(false);
+                              }
+                            }}
+                            className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer ${
+                              isLocked ? 'opacity-50 border-slate-200 dark:border-slate-800' : 'hover:scale-105 border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/40'
+                            }`}
+                          >
+                            <img src={sticker.image} alt={sticker.name} className="w-12 h-12 rounded-lg object-cover" />
+                            <span className="text-[9px] font-bold text-slate-700 dark:text-slate-200 truncate w-full text-center">{sticker.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Input Controls Row */}
                 <form onSubmit={handleSendMessage} className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 shrink-0 relative">
                   <input
@@ -1203,7 +1435,7 @@ export function ChatListCard({
 
                   <button
                     type="button"
-                    onClick={() => { setShowNitroEmojiPicker(!showNitroEmojiPicker); setShowNitroSoundPicker(false); }}
+                    onClick={() => { setShowNitroEmojiPicker(!showNitroEmojiPicker); setShowNitroSoundPicker(false); setShowStickerPicker(false); }}
                     aria-label="Nitro Custom Emojis"
                     className="p-2 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition cursor-pointer"
                   >
@@ -1212,16 +1444,55 @@ export function ChatListCard({
 
                   <button
                     type="button"
-                    onClick={() => { setShowNitroSoundPicker(!showNitroSoundPicker); setShowNitroEmojiPicker(false); }}
+                    onClick={() => { setShowStickerPicker(!showStickerPicker); setShowNitroEmojiPicker(false); setShowNitroSoundPicker(false); }}
+                    aria-label="Nitro 3D Stickers"
+                    className="p-2 text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 transition cursor-pointer"
+                  >
+                    <Sticker className="w-4.5 h-4.5 text-pink-400" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setShowNitroSoundPicker(!showNitroSoundPicker); setShowNitroEmojiPicker(false); setShowStickerPicker(false); }}
                     aria-label="Nitro Soundboard Clips"
                     className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
                   >
                     <Music className="w-4.5 h-4.5" />
                   </button>
 
+                  {/* Voice Note Recorder Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isRecordingVoice) {
+                        setIsRecordingVoice(true);
+                        showToast('🎙️ Recording voice note...');
+                      } else {
+                        setIsRecordingVoice(false);
+                        playSoundEffect('send');
+                        const newMsg: Message = {
+                          id: Date.now().toString(),
+                          senderId: 'me',
+                          senderName: 'You',
+                          text: `Voice note (0:0${Math.max(3, recordingSecs)})`,
+                          timestamp: 'Just now',
+                          isMe: true,
+                          status: 'read',
+                          voiceNote: { duration: `0:0${Math.max(3, recordingSecs)}`, waveform: [40, 80, 60, 100, 30, 70, 90, 50] }
+                        };
+                        setChatList(prev => prev.map(c => c.id === selectedChat.id ? { ...c, lastMessage: newMsg.text, messages: [...c.messages, newMsg] } : c));
+                        showToast('Voice note sent! 🎙️');
+                      }
+                    }}
+                    aria-label="Record voice note"
+                    className={`p-2 transition cursor-pointer rounded-full ${isRecordingVoice ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:text-red-500'}`}
+                  >
+                    {isRecordingVoice ? <Square className="w-4.5 h-4.5 fill-white" /> : <Mic className="w-4.5 h-4.5" />}
+                  </button>
+
                   <input
                     type="text"
-                    placeholder={`Message ${selectedChat.name}...`}
+                    placeholder={isRecordingVoice ? `Recording voice note (0:0${recordingSecs}s)...` : `Message ${selectedChat.name}...`}
                     value={newMessageText}
                     onChange={(e) => setNewMessageText(e.target.value)}
                     className="flex-1 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 rounded-full text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50"
