@@ -72,8 +72,11 @@ export function PricingTable({
           <span className={`text-xs font-semibold ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>Monthly</span>
           <button
             type="button"
+            role="switch"
+            aria-checked={billingCycle === 'yearly'}
+            aria-label="Toggle yearly billing"
             onClick={() => setBillingCycle(b => b === 'monthly' ? 'yearly' : 'monthly')}
-            className="w-12 h-6 bg-slate-200 dark:bg-slate-700 rounded-full p-1 transition cursor-pointer relative"
+            className="w-12 h-6 bg-slate-200 dark:bg-slate-700 rounded-full p-1 transition cursor-pointer relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <div className={`w-4 h-4 bg-indigo-600 rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
           </button>

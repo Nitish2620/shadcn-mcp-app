@@ -1,9 +1,47 @@
-import { useState } from 'react';
-import { UserProfileCard } from '../registry/default/blocks/user-profile-card/user-profile-card';
-import { SocialPostCard } from '../registry/default/blocks/social-post-card/social-post-card';
-import { ChatListCard } from '../registry/default/blocks/chat-list-card/chat-list-card';
-import { PricingTable } from '../registry/default/blocks/pricing-table/pricing-table';
+import { Suspense, lazy, useState, useEffect, useRef, Component } from 'react';
+import type { ReactNode } from 'react';
+import type { UserProfileData, SubscriptionTier } from '../registry/default/blocks/user-profile-card/types';
+import { useProfileSync } from './hooks/useProfileSync';
+const UserProfileModal = lazy(() => import('../registry/default/blocks/user-profile-card/user-profile-modal').then(m => ({ default: m.UserProfileModal })));
+const UserProfileFeatureManager = lazy(() => import('../registry/default/blocks/user-profile-card/user-profile-settings').then(m => ({ default: m.UserProfileFeatureManager })));
+const UserProfilePopout = lazy(() => import('../registry/default/blocks/user-profile-card/user-profile-popout').then(m => ({ default: m.UserProfilePopout })));
+const ServerProfileCard = lazy(() => import('../registry/default/blocks/user-profile-card/server-profile-card').then(m => ({ default: m.ServerProfileCard })));
+const VoiceCallMemberCard = lazy(() => import('../registry/default/blocks/user-profile-card/voice-call-member-card').then(m => ({ default: m.VoiceCallMemberCard })));
+const NitroSubscriptionPricing = lazy(() => import('../registry/default/blocks/nitro-subscription-pricing/nitro-subscription-pricing'));
+const SocialPostCard = lazy(() => import('../registry/default/blocks/social-post-card/social-post-card').then(m => ({ default: m.SocialPostCard })));
+const ChatListCard = lazy(() => import('../registry/default/blocks/chat-list-card/chat-list-card').then(m => ({ default: m.ChatListCard })));
+const PricingTable = lazy(() => import('../registry/default/blocks/pricing-table/pricing-table').then(m => ({ default: m.PricingTable })));
+const DiscordSidebarNav = lazy(() => import('../registry/default/blocks/discord-sidebar-nav/discord-sidebar-nav').then(m => ({ default: m.DiscordSidebarNav })));
+const SpatialCarousel = lazy(() => import('../registry/default/blocks/spatial-carousel/spatial-carousel').then(m => ({ default: m.SpatialCarousel })));
 import { Code2, Sparkles, Layers, CheckCircle2, Eye, Server, Sun, Moon, Zap, Check, Search, Copy, Terminal, ExternalLink, Grid } from 'lucide-react';
+
+// Error Boundary to prevent white-screen-of-death on runtime crashes
+class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="p-8 text-center">
+          <div className="text-red-400 font-bold text-sm mb-2">⚠️ Component crashed</div>
+          <div className="text-slate-500 text-xs mb-4">{this.state.error?.message || 'Unknown error'}</div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface ComponentItem {
   id: string;
@@ -25,6 +63,16 @@ const CATALOG_COMPONENTS: ComponentItem[] = [
     category: 'User & Profile',
     badge: 'Nitro Exclusive',
     dependencies: ['@radix-ui/react-tabs', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 'framer-motion', 'lucide-react', 'clsx', 'tailwind-merge'],
+    installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/user-profile-card.json"'
+  },
+  {
+    id: 'feature-management-card',
+    name: 'feature-management-card',
+    title: 'Feature Management Card (Standalone Settings)',
+    description: 'MNC-grade standalone user settings control panel & feature manager card with live HSL color dropper, croppers, and settings categories.',
+    category: 'Settings & Control',
+    badge: 'MNC Grade',
+    dependencies: ['@radix-ui/react-dialog', 'framer-motion', 'lucide-react'],
     installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/user-profile-card.json"'
   },
   {
@@ -56,15 +104,93 @@ const CATALOG_COMPONENTS: ComponentItem[] = [
     badge: 'New',
     dependencies: ['lucide-react', 'clsx', 'tailwind-merge'],
     installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/pricing-table.json"'
+  },
+  {
+    id: 'discord-sidebar-nav',
+    name: 'discord-sidebar-nav',
+    title: 'Discord Side Navigation Bar',
+    description: 'MNC-grade double-column Discord navigation bar with Server Rail, pill indicators, collapsible channel categories, active voice participants, and user quick controller.',
+    category: 'Navigation & Sidebar',
+    badge: 'MNC Grade',
+    dependencies: ['lucide-react', 'clsx', 'tailwind-merge'],
+    installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/discord-sidebar-nav.json"'
+  },
+  {
+    id: 'spatial-carousel',
+    name: 'spatial-carousel',
+    title: 'Apple-Style 3D Spatial Carousel',
+    description: 'Cinematic 3D CoverFlow carousel with mouse-tracking parallax tilt, spring physics, glassmorphic glare, drag/swipe, keyboard nav, auto-play, fullscreen expand, and floating particles.',
+    category: 'Animation & Motion',
+    badge: 'Premium',
+    dependencies: ['framer-motion', 'lucide-react'],
+    installCommand: 'npx shadcn@latest add "https://raw.githubusercontent.com/Nitish2620/shadcn-mcp-app/main/public/r/spatial-carousel.json"'
   }
 ];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'preview' | 'catalog' | 'code' | 'registry' | 'monetization'>('preview');
-  const [activeComponent, setActiveComponent] = useState<'user-profile-card' | 'chat-list-card' | 'social-post-card' | 'pricing-table'>('user-profile-card');
+  const [activeComponent, setActiveComponent] = useState<'user-profile-card' | 'feature-management-card' | 'profile-preview-card' | 'server-profile-card' | 'voice-call-member-card' | 'nitro-subscription-pricing' | 'chat-list-card' | 'social-post-card' | 'pricing-table' | 'discord-sidebar-nav' | 'spatial-carousel'>('user-profile-card');
   const [darkMode, setDarkMode] = useState(false);
-  const [copiedCmd, setCopiedCmd] = useState<{ [key: string]: boolean }>({});
+  const [copiedCmd, setCopiedCmd] = useState<Record<string, boolean>>({});
+  const activeTimeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      activeTimeouts.current.forEach(clearTimeout);
+      activeTimeouts.current.clear();
+    };
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Shared full profile data sync — reacts to changes from ANY component
+  const [appProfileData, setAppProfileData] = useProfileSync({
+    name: 'Ram Verma',
+    handle: '@ram',
+    userStatus: 'online' as const,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
+    bio: 'Full-stack AI systems architect & Discord Nitro Booster ✨ Building MNC-grade web apps with Next.js, Tailwind CSS & Radix UI primitives.',
+    pronouns: 'he/him',
+    joinedDiscordDate: 'Feb 14, 2021',
+    joinedServerDate: 'Nov 02, 2022',
+    themeColor: 'from-purple-600 to-indigo-600',
+    profileTheme: 'blurple' as const,
+    avatarDecoration: 'sakura' as const,
+    bannerEffect: 'sakura_moonlight' as const,
+    profileEffect: 'sakura_breeze' as const,
+    nitroLevel: 'level3' as const,
+    subscriptionTier: 'nitro_pro' as const,
+    badges: [],
+    stats: { followers: 1280, likes: 4320, mediaCount: 42, postsCount: 18, boostCount: 14, nextLevelBoosts: 20 },
+    serverRoles: [
+      { id: 'r1', name: 'Admin', colorGradient: '#818cf8', animated: false },
+      { id: 'r2', name: 'Nitro Booster', colorGradient: '#e879f9', animated: true },
+      { id: 'r3', name: 'Core Contributor', colorGradient: '#34d399', animated: false }
+    ],
+    spotifyPresence: {
+      song: 'Starboy (feat. Daft Punk)',
+      artist: 'The Weeknd, Daft Punk',
+      albumArt: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=300&q=80',
+      durationSeconds: 230,
+      currentSeconds: 102,
+      isPlaying: true
+    },
+    gamePresence: {
+      name: 'Cyberpunk 2077',
+      details: 'Exploring Night City',
+      state: 'In Competitive Lobby (3/4)',
+      icon: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80',
+      elapsedTime: '01:45 elapsed'
+    },
+    connectedAccounts: [
+      { id: '1', platform: 'github', name: 'Nitish2620', url: 'https://github.com/Nitish2620' },
+      { id: '2', platform: 'twitter', name: '@Nitish_Dev', url: 'https://twitter.com/' },
+      { id: '3', platform: 'spotify', name: 'Nitish Mix', url: 'https://spotify.com/' }
+    ]
+  });
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -78,7 +204,11 @@ export default function App() {
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedCmd(prev => ({ ...prev, [id]: true }));
-    setTimeout(() => setCopiedCmd(prev => ({ ...prev, [id]: false })), 2000);
+    const t = setTimeout(() => {
+      setCopiedCmd(prev => ({ ...prev, [id]: false }));
+      activeTimeouts.current.delete(t);
+    }, 2000);
+    activeTimeouts.current.add(t);
   };
 
   const componentUsageCode = `import { UserProfileCard } from '@/components/blocks/user-profile-card/user-profile-card';
@@ -220,6 +350,16 @@ export default function ProfilePage() {
               </div>
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <button
+                  onClick={() => setActiveComponent('profile-preview-card')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'profile-preview-card' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  1. Popout Card
+                </button>
+                <button
                   onClick={() => setActiveComponent('user-profile-card')}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
                     activeComponent === 'user-profile-card' 
@@ -227,7 +367,48 @@ export default function ProfilePage() {
                       : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
                   }`}
                 >
-                  User Profile Card (Nitro)
+                  2. Full Modal
+                </button>
+                <button
+                  onClick={() => setActiveComponent('feature-management-card')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'feature-management-card' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  3. Settings Dashboard
+                </button>
+                <button
+                  onClick={() => setActiveComponent('server-profile-card')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'server-profile-card' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  4. Server Profile Card
+                </button>
+                <button
+                  onClick={() => setActiveComponent('voice-call-member-card')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'voice-call-member-card' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  5. Voice Call Overlay
+                </button>
+                <button
+                  onClick={() => setActiveComponent('nitro-subscription-pricing')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'nitro-subscription-pricing' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Nitro Subscription Pricing
+
                 </button>
                 <button
                   onClick={() => setActiveComponent('chat-list-card')}
@@ -259,20 +440,88 @@ export default function ProfilePage() {
                 >
                   Pricing Table
                 </button>
+                <button
+                  onClick={() => setActiveComponent('discord-sidebar-nav')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'discord-sidebar-nav' 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Discord Side Navigation Bar
+                </button>
+                <button
+                  onClick={() => setActiveComponent('spatial-carousel')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                    activeComponent === 'spatial-carousel' 
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-600 border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  🎠 3D Spatial Carousel
+                </button>
               </div>
             </div>
 
             {/* Live Component Render */}
-            <div className="py-2">
-              {activeComponent === 'user-profile-card' ? (
-                <UserProfileCard />
-              ) : activeComponent === 'chat-list-card' ? (
-                <ChatListCard />
-              ) : activeComponent === 'social-post-card' ? (
-                <SocialPostCard />
-              ) : (
-                <PricingTable />
-              )}
+            <div className="py-2 flex justify-center">
+              <Suspense fallback={<div className="p-12 text-sm font-semibold text-purple-400 animate-pulse flex items-center gap-2"><Sparkles className="w-4 h-4" /> Loading MNC-grade component...</div>}>
+              <ErrorBoundary>
+                {activeComponent === 'user-profile-card' ? (
+                  <div className="flex flex-col items-center gap-4 py-12">
+                    <button onClick={() => setIsModalOpen(true)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg transition-colors font-semibold">
+                      Open Full Profile Modal
+                    </button>
+                    <UserProfileModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} profile={appProfileData} subscriptionTier={appProfileData.subscriptionTier} />
+                  </div>
+                ) : activeComponent === 'feature-management-card' ? (
+                  <UserProfileFeatureManager 
+                    profile={appProfileData}
+                    subscriptionTier={appProfileData.subscriptionTier}
+                    onSaveProfile={(updated: UserProfileData) => {
+                      console.log('Saved profile:', updated);
+                      setAppProfileData(updated);
+                    }}
+                    onSelectSubscription={(tier: SubscriptionTier) => setAppProfileData({...appProfileData, subscriptionTier: tier})}
+                    isModal={false}
+                  />
+                ) : activeComponent === 'nitro-subscription-pricing' ? (
+                  <NitroSubscriptionPricing 
+                    subscriptionTier={appProfileData.subscriptionTier} 
+                    onSelectSubscription={(tier) => setAppProfileData({...appProfileData, subscriptionTier: tier as SubscriptionTier})} 
+                  />
+                ) : activeComponent === 'profile-preview-card' ? (
+                  <div className="w-full max-w-md p-6 bg-slate-900/60 rounded-3xl border border-slate-800 flex flex-col items-center gap-4">
+                    <div className="text-xs text-purple-400 font-bold tracking-wider uppercase">Standalone Real-Time Profile Popout Component</div>
+                    <UserProfilePopout profile={appProfileData} subscriptionTier={appProfileData.subscriptionTier} />
+                  </div>
+                ) : activeComponent === 'server-profile-card' ? (
+                  <div className="w-full max-w-md p-6 bg-slate-900/60 rounded-3xl border border-slate-800 flex flex-col items-center gap-4">
+                    <div className="text-xs text-purple-400 font-bold tracking-wider uppercase">Standalone Server-Specific Profile Card Component</div>
+                    <ServerProfileCard profile={appProfileData} subscriptionTier={appProfileData.subscriptionTier} />
+                  </div>
+                ) : activeComponent === 'voice-call-member-card' ? (
+                  <div className="w-full max-w-md p-6 bg-slate-900/60 rounded-3xl border border-slate-800 flex flex-col items-center gap-4">
+                    <div className="text-xs text-purple-400 font-bold tracking-wider uppercase">Standalone Voice Call Member Overlay Card Component</div>
+                    <VoiceCallMemberCard profile={appProfileData} isSpeaking={true} isStreaming={true} onViewProfile={() => setIsModalOpen(true)} />
+                  </div>
+                ) : activeComponent === 'chat-list-card' ? (
+                  <ChatListCard 
+                    subscriptionTier={appProfileData.subscriptionTier} 
+                    profile={appProfileData} 
+                    onSelectSubscription={(tier) => setAppProfileData({...appProfileData, subscriptionTier: tier as SubscriptionTier})} 
+                  />
+                ) : activeComponent === 'social-post-card' ? (
+                  <SocialPostCard profile={appProfileData} />
+                ) : activeComponent === 'discord-sidebar-nav' ? (
+                  <DiscordSidebarNav profile={appProfileData} onOpenSettings={() => setIsModalOpen(true)} />
+                ) : activeComponent === 'spatial-carousel' ? (
+                  <SpatialCarousel />
+                ) : (
+                  <PricingTable />
+                )}
+              </ErrorBoundary>
+              </Suspense>
             </div>
           </div>
         )}

@@ -54,6 +54,10 @@ export interface Comment {
   isPinned?: boolean;
   hasVoiceNote?: boolean;
   voiceDuration?: string;
+  isEdited?: boolean;
+  isAuthor?: boolean;
+  reactions?: Record<string, number>;
+  media?: string;
   replies?: Comment[];
 }
 
@@ -66,7 +70,18 @@ export interface PostAnalytics {
   clicks: number;
 }
 
+import type { UserProfileData } from '../user-profile-card/types';
+
+export interface LinkPreviewData {
+  url: string;
+  title: string;
+  description: string;
+  image?: string;
+  domain: string;
+}
+
 export interface SocialPostProps {
+  postId?: string;
   author?: {
     name: string;
     avatar: string;
@@ -86,4 +101,6 @@ export interface SocialPostProps {
   initialViews?: number;
   initialComments?: Comment[];
   analytics?: PostAnalytics;
+  linkPreview?: LinkPreviewData;
+  profile?: UserProfileData;
 }

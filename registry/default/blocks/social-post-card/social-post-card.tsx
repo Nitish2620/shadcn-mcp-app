@@ -15,11 +15,13 @@ import {
   X,
   MapPin,
   Sparkles,
+  Play,
+  Pause,
+  Maximize2,
   ChevronLeft,
   ChevronRight,
-  Maximize2,
-  Pause,
-  Play,
+  ChevronUp,
+  ChevronDown,
   Pin,
   Share,
   Globe,
@@ -36,14 +38,98 @@ import {
   Check,
   Languages,
   PieChart,
-  Users
+  Users,
+  ExternalLink,
+  Image as ImageIcon
 } from 'lucide-react';
-import type { ReactionType, Comment, SocialPostProps, PollData, ReactionUser, PostAnalytics } from './types';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { cn } from "@/lib/utils";
+import { AvatarDecorationFrame } from '../user-profile-card/decorations';
+import type { ReactionType, Comment, SocialPostProps, PollData, ReactionUser, PostAnalytics, LinkPreviewData } from './types';
 import { REACTIONS } from './types';
 
-export type { ReactionType, Comment, SocialPostProps, PollData, ReactionUser, PostAnalytics };
+export type { ReactionType, Comment, SocialPostProps, PollData, ReactionUser, PostAnalytics, LinkPreviewData };
 
-const COMMENT_ITEM_HEIGHT = 86; // Height of each comment row in px for 60 FPS virtualization
+/* ========================================================
+   PREMIUM SKELETON SHIMMER LOADER
+======================================================== */
+const SkeletonShimmer = React.memo(() => (
+  <div className="w-full space-y-5 p-6 sm:p-7">
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 skeleton-shimmer" />
+      <div className="space-y-2 flex-1">
+        <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded-lg w-36 skeleton-shimmer" />
+        <div className="h-2.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg w-52 skeleton-shimmer" />
+      </div>
+    </div>
+    <div className="space-y-2.5">
+      <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded-lg w-full skeleton-shimmer" />
+      <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded-lg w-5/6 skeleton-shimmer" />
+      <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg w-3/4 skeleton-shimmer" />
+    </div>
+    <div className="flex gap-2">
+      {[1,2,3].map(i => <div key={i} className="h-7 bg-slate-100 dark:bg-slate-800/60 rounded-lg w-24 skeleton-shimmer" />)}
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="h-44 bg-slate-200 dark:bg-slate-800 rounded-2xl skeleton-shimmer" />
+      <div className="h-44 bg-slate-200 dark:bg-slate-800 rounded-2xl skeleton-shimmer" />
+    </div>
+    <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+      {[1,2,3].map(i => <div key={i} className="h-9 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-28 skeleton-shimmer" />)}
+    </div>
+  </div>
+));
+SkeletonShimmer.displayName = 'SkeletonShimmer';
+
+/* ========================================================
+   DOUBLE-TAP HEART BURST ANIMATION OVERLAY
+======================================================== */
+const HeartBurstOverlay = React.memo(({ show, x, y }: { show: boolean; x: number; y: number }) => {
+  if (!show) return null;
+  return (
+    <div
+      className="absolute z-20 pointer-events-none"
+      style={{ left: x - 36, top: y - 36 }}
+    >
+      <span
+        className="text-6xl select-none block heart-burst-anim"
+        style={{ filter: 'drop-shadow(0 4px 16px rgba(239,68,68,0.5))' }}
+      >
+        ❤️
+      </span>
+    </div>
+  );
+});
+HeartBurstOverlay.displayName = 'HeartBurstOverlay';
+
+/* ========================================================
+   LINK PREVIEW CARD (OG-STYLE URL EMBED)
+======================================================== */
+const LinkPreviewCard = React.memo(({ url, title, description, image, domain }: LinkPreviewData) => (
+  <a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group block my-4 bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-500 outline-none"
+  >
+    {image && (
+      <div className="w-full h-40 bg-slate-200 dark:bg-slate-800 overflow-hidden">
+        <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
+      </div>
+    )}
+    <div className="p-4 space-y-1.5">
+      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+        <ExternalLink className="w-3 h-3" />
+        {domain}
+      </div>
+      <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">{title}</h4>
+      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{description}</p>
+    </div>
+  </a>
+));
+LinkPreviewCard.displayName = 'LinkPreviewCard';
+
+
 
 /* ========================================================
    INDEXEDDB AUTO-PERSISTENCE ENGINE FOR SOCIAL POST CARD
@@ -122,7 +208,11 @@ const AvatarWithFallback = React.memo(({ name, src, size = "w-10 h-10" }: { name
 
   if (!src || imgError) {
     return (
-      <div className={`${size} rounded-full bg-gradient-to-br ${gradient} text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-800 shrink-0 shadow-2xs`}>
+      <div 
+        role="img"
+        aria-label={name}
+        className={`${size} rounded-full bg-gradient-to-br ${gradient} text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-800 shrink-0 shadow-2xs`}
+      >
         {initials}
       </div>
     );
@@ -145,21 +235,35 @@ AvatarWithFallback.displayName = 'AvatarWithFallback';
    MEMOIZED VOICE PLAYER SUB-COMPONENT
 ======================================================== */
 const VoicePlayer = React.memo(({ 
-  commentId, 
-  isPlaying, 
-  onTogglePlay, 
   duration 
 }: { 
-  commentId: string; 
-  isPlaying: boolean; 
-  onTogglePlay: (id: string) => void; 
   duration?: string 
 }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const timeoutRef = useRef<any>(null);
+
+  const handleTogglePlay = () => {
+    const nextState = !isPlaying;
+    setIsPlaying(nextState);
+    if (nextState) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setIsPlaying(false), 15000); // Auto-stop mock
+    } else {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   return (
     <div className="mt-2.5 p-2.5 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200/50 dark:border-blue-900/50 flex items-center gap-3">
       <button
         type="button"
-        onClick={() => onTogglePlay(commentId)}
+        onClick={handleTogglePlay}
         aria-label={isPlaying ? "Pause voice message" : "Play voice message"}
         className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition shadow-xs cursor-pointer"
       >
@@ -218,6 +322,7 @@ const PollWidget = React.memo(({
             <button
               key={option.id}
               type="button"
+              aria-pressed={isVoted}
               data-voted={isVoted ? "true" : "false"}
               onClick={() => onVote(option.id)}
               className={`w-full relative overflow-hidden rounded-xl p-3 text-left transition border cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 outline-none ${
@@ -258,45 +363,259 @@ PollWidget.displayName = 'PollWidget';
 /* ========================================================
    MEMOIZED COMMENT ROW SUB-COMPONENT WITH INLINE REPLY
 ======================================================== */
+/* ========================================================
+   RICH TEXT FORMATTER FOR COMMENTS (Mentions & Hashtags)
+======================================================== */
+const formatRichText = (text: string) => {
+  if (!text) return text;
+  
+  // Advanced regex to capture Markdown formatting, mentions, hashtags, and URLs.
+  const tokens = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|@[a-zA-Z0-9_]+|#[a-zA-Z0-9_]+|https?:\/\/[^\s]+)/g);
+  
+  return (
+    <>
+      {tokens.map((token, i) => {
+        if (!token) return null;
+        
+        if (token.startsWith('**') && token.endsWith('**')) {
+          return <strong key={i} className="font-bold text-slate-900 dark:text-slate-100">{token.slice(2, -2)}</strong>;
+        }
+        if (token.startsWith('*') && token.endsWith('*')) {
+          return <em key={i} className="italic">{token.slice(1, -1)}</em>;
+        }
+        if (token.startsWith('`') && token.endsWith('`')) {
+          return <code key={i} className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs text-pink-500 font-mono">{token.slice(1, -1)}</code>;
+        }
+        if (token.startsWith('@') && token.length > 1) {
+          const username = token.slice(1);
+          return (
+            <HoverCard key={i}>
+              <HoverCardTrigger asChild>
+                <span className="text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline">
+                  {token}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-72 p-4 animate-in zoom-in-95" align="start">
+                <div className="flex justify-between space-x-4">
+                  <AvatarWithFallback name={username} size="w-12 h-12 text-lg" />
+                  <div className="space-y-1 flex-1">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{username}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Software Engineer & UI Enthusiast. Love building cool things!</p>
+                    <div className="flex items-center pt-2">
+                      <span className="text-xs font-medium text-slate-400">Joined December 2021</span>
+                    </div>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          );
+        }
+        if (token.startsWith('#') && token.length > 1) {
+          return (
+            <span key={i} className="text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline">
+              {token}
+            </span>
+          );
+        }
+        if (token.startsWith('http://') || token.startsWith('https://')) {
+          return (
+            <a key={i} href={token} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5">
+              {token.length > 30 ? token.substring(0, 30) + '...' : token}
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          );
+        }
+        
+        return <React.Fragment key={i}>{token}</React.Fragment>;
+      })}
+    </>
+  );
+};
+
+const USERS = ['Ray Hammond', 'Cynthia Henry', 'Marcus Vance', 'Sarah Jenkins', 'David Kim'];
+const HASHTAGS = ['#React', '#Frontend', '#NYC', '#Travel', '#Coding', '#Design'];
+
+const CommentInputWithAutocomplete = ({
+  value,
+  onChange,
+  placeholder,
+  className,
+  autoFocus,
+  id
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  autoFocus?: boolean;
+  id?: string;
+}) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [options, setOptions] = useState<string[]>([]);
+  const [matchInfo, setMatchInfo] = useState<{ trigger: string; query: string; index: number } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    onChange(val);
+
+    const cursor = e.target.selectionStart || 0;
+    const textBeforeCursor = val.slice(0, cursor);
+    const match = textBeforeCursor.match(/([@#][\w]*)$/);
+
+    if (match) {
+      const trigger = match[1][0];
+      const query = match[1].slice(1).toLowerCase();
+      
+      let filtered: string[] = [];
+      if (trigger === '@') {
+        filtered = USERS.filter(u => u.toLowerCase().includes(query)).map(u => `@${u.replace(/\s+/g, '')}`);
+      } else if (trigger === '#') {
+        filtered = HASHTAGS.filter(h => h.toLowerCase().includes(query));
+      }
+
+      if (filtered.length > 0) {
+        setOptions(filtered);
+        setMatchInfo({ trigger, query, index: match.index! });
+        setShowDropdown(true);
+      } else {
+        setShowDropdown(false);
+      }
+    } else {
+      setShowDropdown(false);
+    }
+  };
+
+  const handleSelect = (option: string) => {
+    if (!matchInfo) return;
+    const before = value.slice(0, matchInfo.index);
+    const after = value.slice(matchInfo.index + matchInfo.trigger.length + matchInfo.query.length);
+    const newValue = `${before}${option} ${after}`;
+    onChange(newValue);
+    setShowDropdown(false);
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="relative flex-1 flex">
+      <input
+        ref={inputRef}
+        id={id}
+        type="text"
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        value={value}
+        onChange={handleInput}
+        className={className}
+      />
+      {showDropdown && (
+        <div className="absolute bottom-full left-0 mb-2 w-48 max-h-40 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2">
+          {options.map((opt, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => handleSelect(opt)}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/40 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer"
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ========================================================
+   MEMOIZED COMMENT ROW SUB-COMPONENT WITH INLINE REPLY (N-LEVEL RECURSION)
+======================================================== */
 const CommentRow = React.memo(({ 
   comment, 
   onLike, 
   onAddReply, 
-  isPlayingAudio, 
-  onToggleVoice, 
-  showReplies, 
-  onToggleReplies 
+  onEdit,
+  onDelete,
+  onToggleReaction,
+  onTogglePin,
+  depth = 0,
+  parentAuthorName
 }: { 
   comment: Comment; 
   onLike: (id: string) => void; 
-  onAddReply: (commentId: string, replyText: string) => void; 
-  isPlayingAudio: boolean; 
-  onToggleVoice: (id: string) => void; 
-  showReplies: boolean; 
-  onToggleReplies: (id: string) => void; 
+  onAddReply: (commentId: string, replyText: string, media?: string | null) => void; 
+  onEdit: (id: string, text: string) => void;
+  onDelete: (id: string) => void;
+  onToggleReaction: (id: string, emoji: string) => void;
+  onTogglePin?: (id: string) => void;
+  depth?: number;
+  parentAuthorName?: string;
 }) => {
+  const [isRepliesExpanded, setIsRepliesExpanded] = useState(true);
   const [isReplying, setIsReplying] = useState(false);
   const [replyInput, setReplyInput] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editInput, setEditInput] = useState(comment.text);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [replyMedia, setReplyMedia] = useState<string | null>(null);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const activeTimeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      activeTimeouts.current.forEach(clearTimeout);
+      activeTimeouts.current.clear();
+    };
+  }, []);
 
   const handleSendReply = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyInput.trim()) return;
-    onAddReply(comment.id, replyInput.trim());
-    setReplyInput('');
-    setIsReplying(false);
+    if (!replyInput.trim() && !replyMedia) return;
+    if (isSubmittingReply) return;
+    
+    setIsSubmittingReply(true);
+    // Simulate network latency for MNC-grade feel
+    const t = setTimeout(() => {
+      onAddReply(comment.id, replyInput.trim(), replyMedia);
+      setIsRepliesExpanded(true); // Auto-expand when adding a reply
+      setReplyInput('');
+      setReplyMedia(null);
+      setIsReplying(false);
+      setIsSubmittingReply(false);
+      activeTimeouts.current.delete(t);
+    }, 300);
+    activeTimeouts.current.add(t);
   };
 
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editInput.trim()) return;
+    onEdit(comment.id, editInput.trim());
+    setIsEditing(false);
+  };
+
+  // Limit visual indentation to 4 levels maximum
+  const visualDepth = Math.min(depth, 4);
+
   return (
-    <div className="space-y-2 group animate-in fade-in duration-200">
+    <div className={`space-y-2 group animate-in fade-in duration-200 ${visualDepth > 0 ? 'mt-2.5 pl-3 sm:pl-5 border-l-2 border-slate-200/70 dark:border-slate-800/70' : ''}`}>
       <div className="flex items-start gap-2.5">
-        <AvatarWithFallback name={comment.author.name} src={comment.author.avatar} size="w-8 h-8" />
+        <AvatarWithFallback name={comment.author.name} src={comment.author.avatar} size={visualDepth > 0 ? "w-6 h-6" : "w-8 h-8"} />
         <div className="flex-1 min-w-0">
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl rounded-tl-none border border-slate-200/60 dark:border-slate-800/80 shadow-2xs">
-            <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl rounded-tl-none border border-slate-200/60 dark:border-slate-800/80 shadow-2xs group/comment">
+            <div className="flex items-start justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-xs text-slate-900 dark:text-white">
+                <span className={`font-bold text-slate-900 dark:text-white hover:underline cursor-pointer ${visualDepth > 0 ? 'text-[11px]' : 'text-xs'}`}>
                   {comment.author.name}
                 </span>
+                
+                {parentAuthorName && (
+                  <div className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400 font-medium text-[10px]">
+                    <CornerDownRight className="w-3 h-3" />
+                    <span>{parentAuthorName}</span>
+                  </div>
+                )}
+
                 {comment.author.badge && (
                   <span className="text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 px-1.5 py-0.2 rounded-full border border-blue-200 dark:border-blue-800">
                     {comment.author.badge}
@@ -308,24 +627,118 @@ const CommentRow = React.memo(({
                   </span>
                 )}
               </div>
-              <span className="text-slate-400 text-[10px]">{comment.timestamp}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400 text-[10px] whitespace-nowrap">{comment.timestamp}</span>
+                {comment.isEdited && <span className="text-slate-400 text-[9px] font-medium italic">(edited)</span>}
+                <div className="relative">
+                  <button 
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={showMenu}
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="opacity-0 group-hover/comment:opacity-100 transition-opacity p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md"
+                    title="Comment options"
+                  >
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                  {showMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                      <div role="menu" className="absolute right-0 top-6 z-20 w-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1 animate-in zoom-in-95 fade-in">
+                        {comment.isAuthor && (
+                          <>
+                            <button role="menuitem" type="button" onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition focus-visible:bg-slate-100 dark:focus-visible:bg-slate-800 outline-none"><Edit3 className="w-3.5 h-3.5" /> Edit</button>
+                            <button role="menuitem" type="button" onClick={() => { onDelete(comment.id); setShowMenu(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition focus-visible:bg-red-50 dark:focus-visible:bg-red-950/30 outline-none"><Trash2 className="w-3.5 h-3.5" /> Delete</button>
+                            <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                          </>
+                        )}
+                        <button 
+                          role="menuitem"
+                          type="button" 
+                          onClick={() => {
+                            onTogglePin?.(comment.id);
+                            setShowMenu(false);
+                          }} 
+                          className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition font-medium"
+                        >
+                          <Pin className="w-3.5 h-3.5 fill-amber-500" /> {comment.isPinned ? 'Unpin comment' : 'Pin comment'}
+                        </button>
+                        <button 
+                          role="menuitem"
+                          type="button" 
+                          onClick={() => {
+                            try {
+                              navigator.clipboard.writeText(comment.text);
+                            } catch {}
+                            setShowMenu(false);
+                          }} 
+                          className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Copy text
+                        </button>
+                        <button role="menuitem" type="button" onClick={() => setShowMenu(false)} className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition focus-visible:bg-red-50 dark:focus-visible:bg-red-950/30 outline-none"><Flag className="w-3.5 h-3.5" /> Report</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed break-words">
-              {comment.text}
-            </p>
+            {isEditing ? (
+              <form onSubmit={handleSaveEdit} className="mt-2 flex items-center gap-2">
+                <CommentInputWithAutocomplete
+                  autoFocus
+                  value={editInput}
+                  onChange={setEditInput}
+                  className="flex-1 bg-white dark:bg-slate-900 px-2.5 py-1.5 rounded-lg text-xs border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-slate-800 dark:text-slate-100"
+                />
+                <button type="submit" className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition shadow-2xs">Save</button>
+                <button type="button" onClick={() => { setIsEditing(false); setEditInput(comment.text); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-300 dark:hover:bg-slate-700 transition">Cancel</button>
+              </form>
+            ) : (
+              <p className={`text-slate-700 dark:text-slate-300 leading-relaxed break-words ${visualDepth > 0 ? 'text-[11px]' : 'text-xs'}`}>
+                {formatRichText(comment.text)}
+              </p>
+            )}
+
+            {comment.media && (
+              <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                <img src={comment.media} alt="Attached media" className="max-h-48 w-auto object-cover" />
+              </div>
+            )}
 
             {comment.hasVoiceNote && (
               <VoicePlayer 
-                commentId={comment.id} 
-                isPlaying={isPlayingAudio} 
-                onTogglePlay={onToggleVoice} 
                 duration={comment.voiceDuration} 
               />
             )}
+
+            {/* Display active reactions */}
+            {comment.reactions && Object.keys(comment.reactions).length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {Object.entries(comment.reactions).map(([emoji, count]) => {
+                  const rConfig = REACTIONS.find(r => r.emoji === emoji);
+                  return (
+                    <button 
+                      key={emoji}
+                      onClick={() => onToggleReaction(comment.id, emoji)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all hover:scale-105 active:scale-95 cursor-pointer border",
+                        rConfig ? rConfig.bg : "bg-slate-100 dark:bg-slate-800",
+                        rConfig ? rConfig.color : "text-slate-700 dark:text-slate-300",
+                        rConfig ? "border-transparent" : "border-slate-200 dark:border-slate-700"
+                      )}
+                    >
+                      <span>{emoji}</span>
+                      <span>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] mt-1 px-1.5">
+          <div className="flex items-center gap-3 text-[11px] mt-1 px-1.5 relative">
             <button
               type="button"
               data-liked={comment.isLiked ? "true" : "false"}
@@ -347,50 +760,105 @@ const CommentRow = React.memo(({
               <span>Reply</span>
             </button>
 
-            {comment.replies && comment.replies.length > 0 && (
-              <button
+            <div className="relative flex items-center">
+              <button 
                 type="button"
-                onClick={() => onToggleReplies(comment.id)}
-                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer ml-auto"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-md px-1"
               >
-                {showReplies ? 'Hide' : `${comment.replies.length} replies`}
+                <Smile className="w-3 h-3" />
+                <span>React</span>
               </button>
+
+              {showEmojiPicker && (
+                <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-full px-2 py-1 flex items-center gap-1 animate-in zoom-in-95 fade-in duration-200">
+                  {REACTIONS.map((reaction) => (
+                    <button
+                      key={reaction.type}
+                      type="button"
+                      onClick={() => {
+                        onToggleReaction(comment.id, reaction.emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                      className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-transform hover:scale-125 cursor-pointer text-base"
+                      title={reaction.label}
+                    >
+                      {reaction.emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {comment.replies && comment.replies.length > 0 && (
+              <div className="flex items-center mt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsRepliesExpanded(!isRepliesExpanded)}
+                  className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 px-2.5 py-1.5 rounded-full font-bold cursor-pointer flex items-center gap-1.5 text-xs transition-colors"
+                >
+                  {isRepliesExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {isRepliesExpanded ? 'Hide replies' : `View ${comment.replies.length} ${comment.replies.length === 1 ? 'reply' : 'replies'}`}
+                </button>
+              </div>
             )}
           </div>
 
           {/* Inline Reply Input Composer */}
           {isReplying && (
-            <form onSubmit={handleSendReply} className="mt-2.5 flex items-center gap-2 animate-in fade-in">
-              <input
-                type="text"
-                autoFocus
-                placeholder={`Reply to @${comment.author.name}...`}
-                value={replyInput}
-                onChange={(e) => setReplyInput(e.target.value)}
-                className="flex-1 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/40 text-slate-800 dark:text-slate-100"
-              />
-              <button
-                type="submit"
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition shadow-2xs cursor-pointer"
-              >
-                Reply
-              </button>
-            </form>
+            <div className="mt-2.5 animate-in fade-in slide-in-from-top-1">
+              <form onSubmit={handleSendReply} className="flex items-center gap-2">
+                <div className="flex-1 relative flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-xl px-2 focus-within:ring-2 focus-within:ring-blue-500/40 border border-slate-200 dark:border-slate-700">
+                  <CommentInputWithAutocomplete
+                    autoFocus
+                    placeholder={`Reply to @${comment.author.name}...`}
+                    value={replyInput}
+                    onChange={setReplyInput}
+                    className="flex-1 bg-transparent py-1.5 px-1 text-xs outline-none text-slate-800 dark:text-slate-100 border-none"
+                  />
+                  <button
+                    type="button"
+                    title="Attach mock media"
+                    onClick={() => setReplyMedia(replyMedia ? null : "https://images.unsplash.com/photo-1682687982501-1e58b8147382?w=300&auto=format&fit=crop&q=80")}
+                    className={`p-1.5 rounded-full transition ${replyMedia ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  type="submit"
+                  disabled={!replyInput.trim() && !replyMedia}
+                  className="px-3 py-1.5 bg-blue-600 disabled:opacity-50 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition shadow-2xs cursor-pointer"
+                >
+                  Reply
+                </button>
+              </form>
+              {replyMedia && (
+                <div className="mt-2 relative inline-block">
+                  <img src={replyMedia} alt="Preview" className="h-16 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm" />
+                  <button type="button" onClick={() => setReplyMedia(null)} className="absolute -top-1.5 -right-1.5 bg-slate-800 text-white rounded-full p-0.5 shadow-md hover:bg-slate-700 cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
-          {showReplies && comment.replies && (
-            <div className="mt-2.5 pl-3 border-l-2 border-blue-500/30 dark:border-blue-500/20 space-y-2.5">
+          {/* RECURSIVE REPLIES RENDER */}
+          {isRepliesExpanded && comment.replies && comment.replies.length > 0 && (
+            <div className="mt-1">
               {comment.replies.map(reply => (
-                <div key={reply.id} className="flex items-start gap-2">
-                  <AvatarWithFallback name={reply.author.name} src={reply.author.avatar} size="w-6 h-6" />
-                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl rounded-tl-none text-xs border border-slate-100 dark:border-slate-800/60 flex-1">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="font-bold text-slate-900 dark:text-white text-[11px]">{reply.author.name}</span>
-                      <span className="text-slate-400 text-[9px]">{reply.timestamp}</span>
-                    </div>
-                    <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">{reply.text}</p>
-                  </div>
-                </div>
+                <CommentRow 
+                  key={reply.id}
+                  comment={reply}
+                  onLike={onLike}
+                  onAddReply={onAddReply}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onToggleReaction={onToggleReaction}
+                  onTogglePin={onTogglePin}
+                  depth={depth + 1}
+                  parentAuthorName={comment.author.name}
+                />
               ))}
             </div>
           )}
@@ -404,6 +872,47 @@ CommentRow.displayName = 'CommentRow';
 /* ========================================================
    MAIN MNC WORLD-GRADE SOCIAL POST CARD
 ======================================================== */
+const updateNestedComment = (comments: Comment[], id: string, updater: (c: Comment) => Comment): Comment[] => {
+  let changed = false;
+  const newComments = comments.map(c => {
+    if (c.id === id) {
+      changed = true;
+      return updater(c);
+    }
+    if (c.replies && c.replies.length > 0) {
+      const nextReplies = updateNestedComment(c.replies, id, updater);
+      if (nextReplies !== c.replies) {
+        changed = true;
+        return { ...c, replies: nextReplies };
+      }
+    }
+    return c;
+  });
+  return changed ? newComments : comments;
+};
+
+const deleteNestedComment = (comments: Comment[], id: string): Comment[] => {
+  let changed = false;
+  const filtered = comments.filter(c => c.id !== id);
+  
+  if (filtered.length !== comments.length) {
+    changed = true;
+  }
+
+  const newComments = filtered.map(c => {
+    if (c.replies && c.replies.length > 0) {
+      const nextReplies = deleteNestedComment(c.replies, id);
+      if (nextReplies !== c.replies) {
+        changed = true;
+        return { ...c, replies: nextReplies };
+      }
+    }
+    return c;
+  });
+
+  return changed ? newComments : comments;
+};
+
 export function SocialPostCard({
   author = {
     name: 'Ray Hammond',
@@ -444,6 +953,19 @@ export function SocialPostCard({
   },
   initialComments = [
     {
+      id: 'c2',
+      author: {
+        name: 'Marcus Vance',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
+      },
+      timestamp: 'Yesterday at 8:45 PM',
+      text: "Here is a quick voice note about the best Brooklyn pizza spots! 🍕",
+      likes: 14,
+      isLiked: true,
+      hasVoiceNote: true,
+      voiceDuration: '0:24'
+    },
+    {
       id: 'c1',
       author: {
         name: 'Cynthia Henry',
@@ -467,21 +989,17 @@ export function SocialPostCard({
           likes: 5
         }
       ]
-    },
-    {
-      id: 'c2',
-      author: {
-        name: 'Marcus Vance',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
-      },
-      timestamp: 'Yesterday at 8:45 PM',
-      text: "Here is a quick voice note about the best Brooklyn pizza spots! 🍕",
-      likes: 14,
-      isLiked: true,
-      hasVoiceNote: true,
-      voiceDuration: '0:24'
     }
-  ]
+  ],
+  linkPreview = {
+    url: 'https://www.nytimes.com/travel/new-york-city-guide',
+    title: 'The Ultimate NYC Travel Guide — Hidden Gems & Local Tips',
+    description: 'Discover the best neighborhoods, restaurants, and secret spots that most tourists miss. A comprehensive guide curated by New York locals.',
+    image: '/ny_skyline.jpg',
+    domain: 'nytimes.com'
+  },
+  profile,
+  postId = 'mainPost'
 }: SocialPostProps) {
   // Post Core State
   const [currentReaction, setCurrentReaction] = useState<ReactionType | null>('love');
@@ -509,28 +1027,43 @@ export function SocialPostCard({
 
   // Discussion Comments Panel
   const [isCommentsOpen, setIsCommentsOpen] = useState(true);
+  const [commentSort, setCommentSort] = useState<'newest' | 'oldest' | 'top'>('oldest');
+  const [commentFilter, setCommentFilter] = useState<'all' | 'top' | 'pinned'>('all');
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newCommentText, setNewCommentText] = useState('');
+  const [newCommentMedia, setNewCommentMedia] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [commentFilter, setCommentFilter] = useState<'all' | 'top' | 'pinned'>('all');
-  const [showReplies, setShowReplies] = useState<{ [key: string]: boolean }>({ c1: true });
-  const [isPlayingAudio, setIsPlayingAudio] = useState<{ [key: string]: boolean }>({});
+  
+  // Refs
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const commentsStartRef = useRef<HTMLDivElement>(null);
 
   // Lightbox Modal
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  // Debounced Search & Virtualization
+  // Debounced Search
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [commentScrollTop, setCommentScrollTop] = useState(0);
-  const commentScrollRef = useRef<HTMLDivElement>(null);
 
   const [notification, setNotification] = useState<string | null>(null);
   const reactionTimeoutRef = useRef<any>(null);
+  const toastTimeoutRef = useRef<any>(null);
+  const heartBurstTimeoutRef = useRef<any>(null);
+  const activeTimeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  // MNC-Grade Premium Feature States
+  const [visibleCommentCount, setVisibleCommentCount] = useState(10);
+
+  // MNC-Grade Premium Feature States
+  const [isContentLoaded, setIsContentLoaded] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
+  const [heartBurst, setHeartBurst] = useState<{ show: boolean; x: number; y: number; idx: number }>({ show: false, x: 0, y: 0, idx: -1 });
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Auto-Hydration from IndexedDB
   useEffect(() => {
-    idbLoadPostState('mainPost').then((stored) => {
+    idbLoadPostState(postId).then((stored) => {
       if (stored) {
         if (stored.likesCount !== undefined) setLikesCount(stored.likesCount);
         if (stored.currentReaction !== undefined) setCurrentReaction(stored.currentReaction);
@@ -539,12 +1072,12 @@ export function SocialPostCard({
         if (stored.pollState) setPollState(stored.pollState);
       }
     });
-  }, []);
+  }, [postId]);
 
   // Auto-Save to IndexedDB on State Change
   useEffect(() => {
     const handler = setTimeout(() => {
-      idbSavePostState('mainPost', {
+      idbSavePostState(postId, {
         likesCount,
         currentReaction,
         isSaved,
@@ -553,7 +1086,7 @@ export function SocialPostCard({
       });
     }, 500);
     return () => clearTimeout(handler);
-  }, [likesCount, currentReaction, isSaved, comments, pollState]);
+  }, [likesCount, currentReaction, isSaved, comments, pollState, postId]);
 
   // Debounce search query effect
   useEffect(() => {
@@ -561,9 +1094,27 @@ export function SocialPostCard({
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // Premium skeleton loading simulation (700ms reveal)
+  useEffect(() => {
+    const t = setTimeout(() => setIsContentLoaded(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+
+  // MNC-Grade Timeout Cleanup
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (reactionTimeoutRef.current) clearTimeout(reactionTimeoutRef.current);
+      if (heartBurstTimeoutRef.current) clearTimeout(heartBurstTimeoutRef.current);
+      activeTimeouts.current.forEach(clearTimeout);
+      activeTimeouts.current.clear();
+    };
+  }, []);
+
   const showToast = useCallback((msg: string) => {
     setNotification(msg);
-    setTimeout(() => setNotification(null), 2500);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setNotification(null), 2500);
   }, []);
 
   // Web Audio Synthesizer
@@ -599,6 +1150,8 @@ export function SocialPostCard({
     });
     setShowReactionPicker(false);
   }, [playSoundEffect, showToast]);
+
+
 
   // Poll Vote Handler
   const handleVotePoll = useCallback((optionId: string) => {
@@ -644,108 +1197,167 @@ export function SocialPostCard({
   // Add Top-Level Comment
   const handleAddComment = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCommentText.trim()) return;
+    if (!newCommentText.trim() && !newCommentMedia) return;
+    if (isSubmitting) return;
 
+    setIsSubmitting(true);
     playSoundEffect();
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      author: {
-        name: 'You',
-        avatar: '',
-        badge: 'Author'
-      },
-      timestamp: 'Just now',
-      text: newCommentText.trim(),
-      likes: 0
-    };
+    
+    // Simulate API delay
+    const t = setTimeout(() => {
+      const newComment: Comment = {
+        id: crypto.randomUUID(),
+        author: {
+          name: profile?.name || 'You',
+          avatar: profile?.animatedAvatar || profile?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+          badge: profile?.subscriptionTier === 'nitro_pro' ? 'Nitro Pro' : 'Author'
+        },
+        timestamp: 'Just now',
+        text: newCommentText.trim(),
+        media: newCommentMedia || undefined,
+        likes: 0
+      };
 
-    setComments(prev => [newComment, ...prev]);
-    setNewCommentText('');
-    setShowEmojiPicker(false);
-    showToast('Comment posted! 🚀');
-  }, [newCommentText, playSoundEffect, showToast]);
+      setComments(prev => [...prev, newComment]);
+      setNewCommentText('');
+      setNewCommentMedia(null);
+      setShowEmojiPicker(false);
+      setIsSubmitting(false);
+      showToast('Comment posted! 🚀');
+
+      const innerT = setTimeout(() => {
+        if (commentSort === 'newest') {
+          commentsStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+        activeTimeouts.current.delete(innerT);
+      }, 100);
+      activeTimeouts.current.add(innerT);
+      activeTimeouts.current.delete(t);
+    }, 400);
+    activeTimeouts.current.add(t);
+  }, [newCommentText, newCommentMedia, playSoundEffect, profile, showToast, commentSort, isSubmitting]);
 
   // Add Nested Reply to Specific Comment
-  const handleAddReplyToComment = useCallback((commentId: string, replyText: string) => {
+  const handleAddReplyToComment = useCallback((commentId: string, replyText: string, media?: string | null) => {
     playSoundEffect();
     const newReply: Comment = {
-      id: `r_${Date.now()}`,
+      id: crypto.randomUUID(),
       author: {
-        name: 'You',
-        avatar: ''
+        name: profile?.name || 'You',
+        avatar: profile?.animatedAvatar || profile?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        badge: profile?.subscriptionTier === 'nitro_pro' ? 'Nitro Pro' : 'Author'
       },
       timestamp: 'Just now',
       text: replyText,
-      likes: 0
+      media: media || undefined,
+      likes: 0,
+      isAuthor: true
     };
 
-    setComments(prev => prev.map(c => {
-      if (c.id === commentId) {
-        return {
-          ...c,
-          replies: [...(c.replies || []), newReply]
-        };
-      }
-      return c;
-    }));
+    setComments(prev => updateNestedComment(prev, commentId, (c) => ({
+      ...c,
+      replies: [...(c.replies || []), newReply]
+    })));
 
-    setShowReplies(prev => ({ ...prev, [commentId]: true }));
     showToast('Reply posted! 💬');
-  }, [playSoundEffect, showToast]);
+  }, [playSoundEffect, showToast, profile]);
 
   const handleToggleCommentLike = useCallback((commentId: string) => {
     playSoundEffect();
-    setComments(prev => prev.map(c => {
-      if (c.id === commentId) {
-        const liked = !c.isLiked;
-        return {
-          ...c,
-          isLiked: liked,
-          likes: liked ? c.likes + 1 : c.likes - 1
-        };
-      }
-      return c;
+    setComments(prev => updateNestedComment(prev, commentId, (c) => {
+      const liked = !c.isLiked;
+      return {
+        ...c,
+        isLiked: liked,
+        likes: liked ? c.likes + 1 : Math.max(0, c.likes - 1)
+      };
     }));
   }, [playSoundEffect]);
 
-  const handleToggleVoicePlay = useCallback((id: string) => {
-    setIsPlayingAudio(prev => ({ ...prev, [id]: !prev[id] }));
-  }, []);
+  const handleEditComment = useCallback((commentId: string, newText: string) => {
+    playSoundEffect();
+    setComments(prev => updateNestedComment(prev, commentId, (c) => ({
+      ...c,
+      text: newText,
+      isEdited: true
+    })));
+    showToast('Comment edited! 📝');
+  }, [playSoundEffect, showToast]);
 
-  const handleToggleReplies = useCallback((id: string) => {
-    setShowReplies(prev => ({ ...prev, [id]: !prev[id] }));
-  }, []);
+  const handleDeleteComment = useCallback((commentId: string) => {
+    playSoundEffect();
+    setComments(prev => deleteNestedComment(prev, commentId));
+    showToast('Comment deleted! 🗑️');
+  }, [playSoundEffect, showToast]);
 
-  // Filtered Comments List
+  const handleToggleReaction = useCallback((commentId: string, emoji: string) => {
+    playSoundEffect();
+    setComments(prev => updateNestedComment(prev, commentId, (c) => {
+      const currentCount = c.reactions?.[emoji] || 0;
+      const newCount = currentCount > 0 ? 0 : 1;
+      const newReactions = { ...c.reactions };
+      if (newCount === 0) {
+        delete newReactions[emoji];
+      } else {
+        newReactions[emoji] = newCount;
+      }
+      return {
+        ...c,
+        reactions: newReactions
+      };
+    }));
+  }, [playSoundEffect]);
+
+  // Toggle Comment Pin Status
+  const handleTogglePinComment = useCallback((commentId: string) => {
+    playSoundEffect(700);
+    setComments(prev => updateNestedComment(prev, commentId, (c) => {
+      const nextPinned = !c.isPinned;
+      showToast(nextPinned ? 'Comment pinned to top! 📌' : 'Comment unpinned! 📌');
+      return { ...c, isPinned: nextPinned };
+    }));
+  }, [playSoundEffect, showToast]);
+
+
+
+  // Filtered & Sorted Comments List
   const filteredComments = useMemo(() => {
     const query = debouncedQuery.toLowerCase();
-    return comments.filter(c => {
-      if (commentFilter === 'pinned') return c.isPinned;
-      if (commentFilter === 'top') return c.likes >= 5;
-      if (query) return c.text.toLowerCase().includes(query) || c.author.name.toLowerCase().includes(query);
+    const result = comments.filter(c => {
+      if (commentFilter === 'pinned') return c.isPinned || c.replies?.some(r => r.isPinned);
+      if (query) {
+        const matchesComment = c.text.toLowerCase().includes(query) || c.author.name.toLowerCase().includes(query);
+        const matchesReplies = c.replies?.some(r => r.text.toLowerCase().includes(query) || r.author.name.toLowerCase().includes(query));
+        return matchesComment || matchesReplies;
+      }
       return true;
     });
-  }, [comments, commentFilter, debouncedQuery]);
 
-  // Virtualized Windowing for Comments Stream (Supports 10,000 comments at 60 FPS)
-  const handleCommentScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setCommentScrollTop(e.currentTarget.scrollTop);
-  };
+    let sorted = [...result];
 
-  const commentVirtualSlice = useMemo(() => {
-    const totalCount = filteredComments.length;
-    if (totalCount <= 20) {
-      return { items: filteredComments, paddingTop: 0, paddingBottom: 0 };
+    // 1. Apply primary sort
+    if (commentSort === 'newest') {
+      sorted.reverse();
+    } else if (commentSort === 'top') {
+      sorted.sort((a, b) => b.likes - a.likes);
     }
-    const containerHeight = 460;
-    const startIndex = Math.max(0, Math.floor(commentScrollTop / COMMENT_ITEM_HEIGHT) - 3);
-    const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / COMMENT_ITEM_HEIGHT) + 6);
-    return {
-      items: filteredComments.slice(startIndex, endIndex),
-      paddingTop: startIndex * COMMENT_ITEM_HEIGHT,
-      paddingBottom: (totalCount - endIndex) * COMMENT_ITEM_HEIGHT
-    };
-  }, [filteredComments, commentScrollTop]);
+    
+    // 2. MNC Grade Logic: Pinned comments MUST always float to the absolute top
+    sorted.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0; // Maintain relative order if both are pinned or both are unpinned
+    });
+
+    return sorted;
+  }, [comments, commentFilter, debouncedQuery, commentSort]);
+
+  // Paginated Comments
+  const paginatedComments = useMemo(() => {
+    return filteredComments.slice(0, visibleCommentCount);
+  }, [filteredComments, visibleCommentCount]);
 
   // Mock Reaction Users List for Reactions Breakdown Modal
   const mockReactionUsers: ReactionUser[] = useMemo(() => [
@@ -757,6 +1369,68 @@ export function SocialPostCard({
   ], [author.avatar]);
 
   const activeReactionObj = useMemo(() => REACTIONS.find(r => r.type === currentReaction), [currentReaction]);
+
+  // Double-tap heart burst handler (Instagram/Twitter-style)
+  const handleImageDoubleTap = useCallback((e: React.MouseEvent<HTMLDivElement>, imageIdx: number) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setHeartBurst({ show: true, x, y, idx: imageIdx });
+    if (!currentReaction) handleSelectReaction('love');
+    playSoundEffect(880);
+    
+    if (heartBurstTimeoutRef.current) clearTimeout(heartBurstTimeoutRef.current);
+    heartBurstTimeoutRef.current = setTimeout(() => setHeartBurst({ show: false, x: 0, y: 0, idx: -1 }), 900);
+  }, [currentReaction, handleSelectReaction, playSoundEffect]);
+
+  // Computed "Read More" text truncation (180-char threshold)
+  const displayText = showTranslation ? (translatedContent || '') : postText;
+  const isTextLong = displayText.length > 180;
+  const truncatedText = isTextLong && !isTextExpanded ? displayText.slice(0, 180) + '…' : displayText;
+
+  // MNC Keyboard Shortcuts: L=Like, C=Comment focus, Esc=Close all modals
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      switch (e.key.toLowerCase()) {
+        case 'l': handleSelectReaction(currentReaction || 'love'); break;
+        case 'c': 
+          document.getElementById('main-comment-input')?.focus(); 
+          setIsCommentsOpen(true); 
+          break;
+        case 'escape':
+          setShowShareModal(false);
+          setShowAnalyticsModal(false);
+          setShowReactionUsersModal(false);
+          setLightboxIndex(null);
+          setShowMenu(false);
+          break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [currentReaction, handleSelectReaction]);
+
+  // MNC-Grade Infinite Scroll Observer
+  useEffect(() => {
+    if (!isCommentsOpen || !commentsEndRef.current) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCommentCount < filteredComments.length) {
+          setVisibleCommentCount(prev => Math.min(prev + 10, filteredComments.length));
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+    
+    const currentRef = commentsEndRef.current;
+    observer.observe(currentRef);
+    
+    return () => {
+      observer.unobserve(currentRef);
+    };
+  }, [isCommentsOpen, visibleCommentCount, filteredComments.length]);
 
   return (
     <div className="w-full max-w-7xl mx-auto font-sans selection:bg-blue-500 selection:text-white relative">
@@ -782,6 +1456,13 @@ export function SocialPostCard({
           className={`${isCommentsOpen ? 'lg:col-span-7' : 'w-full'} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl transition-all relative text-slate-900 dark:text-slate-100 flex flex-col justify-between`}
         >
           
+          {/* Premium Skeleton Loading State */}
+          {!isContentLoaded && (
+            <div className="absolute inset-0 z-30 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden transition-opacity duration-500">
+              <SkeletonShimmer />
+            </div>
+          )}
+
           <div>
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
@@ -921,8 +1602,17 @@ export function SocialPostCard({
             ) : (
               <div className="space-y-2 mb-3">
                 <p className="text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-relaxed font-normal">
-                  {showTranslation ? translatedContent : postText}
+                  {truncatedText}
                 </p>
+                {isTextLong && (
+                  <button
+                    type="button"
+                    onClick={() => setIsTextExpanded(!isTextExpanded)}
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer transition flex items-center gap-1"
+                  >
+                    {isTextExpanded ? '↑ Show less' : '↓ Read more'}
+                  </button>
+                )}
                 {translatedContent && (
                   <button
                     type="button"
@@ -950,6 +1640,9 @@ export function SocialPostCard({
               </div>
             )}
 
+            {/* Link Preview Embed (OG-Style) */}
+            {linkPreview && <LinkPreviewCard {...linkPreview} />}
+
             {/* REAL-TIME INTERACTIVE SURVEY POLL WIDGET */}
             {pollState && <PollWidget poll={pollState} onVote={handleVotePoll} />}
 
@@ -961,12 +1654,19 @@ export function SocialPostCard({
                     key={index} 
                     className="relative group/img cursor-pointer overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800 aspect-video sm:aspect-[4/3]"
                     onClick={() => setLightboxIndex(index)}
+                    onDoubleClick={(e) => { e.stopPropagation(); handleImageDoubleTap(e, index); }}
                   >
+                    {heartBurst.show && heartBurst.idx === index && (
+                      <HeartBurstOverlay show={true} x={heartBurst.x} y={heartBurst.y} />
+                    )}
                     <img
                       src={img}
                       alt={`Post photo media ${index + 1}`}
                       loading="lazy"
                       decoding="async"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1594322436404-5a0526db4d13?w=800&q=80'; // Fallback
+                      }}
                       className="w-full h-full object-cover transition duration-500 group-hover/img:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition duration-300 flex items-end justify-between p-4">
@@ -1120,7 +1820,7 @@ export function SocialPostCard({
 
         {/* RIGHT COLUMN: Virtualized Discussion Stream Panel */}
         {isCommentsOpen && (
-          <aside className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl transition-all duration-300 flex flex-col h-full relative">
+          <aside className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl transition-all duration-300 flex flex-col h-[calc(100vh-120px)] max-h-[850px] min-h-[500px] relative overflow-hidden self-start sticky top-6">
             
             {/* Header */}
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800 mb-4 shrink-0">
@@ -1143,15 +1843,26 @@ export function SocialPostCard({
 
             {/* Search Filter Tabs */}
             <div className="space-y-3 mb-4 shrink-0">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="text"
-                  placeholder="Filter discussion comments..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-100/80 dark:bg-slate-800/80 pl-9 pr-4 py-2 rounded-xl text-xs border-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium"
-                />
+              <div className="flex gap-2 relative">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Search mentions or keywords..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-100/80 dark:bg-slate-800/80 pl-9 pr-4 py-2 rounded-xl text-xs border-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 font-medium"
+                  />
+                </div>
+                <select
+                  value={commentSort}
+                  onChange={(e) => setCommentSort(e.target.value as 'newest' | 'oldest' | 'top')}
+                  className="bg-slate-100/80 dark:bg-slate-800/80 px-3 py-2 rounded-xl text-xs border-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-800 dark:text-slate-100 font-medium cursor-pointer"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="top">Top Comments</option>
+                </select>
               </div>
 
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full text-xs">
@@ -1179,53 +1890,74 @@ export function SocialPostCard({
               </div>
             </div>
 
-            {/* VIRTUALIZED COMMENTS STREAM (Supports 10,000 comments at 60 FPS) */}
+            {/* PAGINATED COMMENTS STREAM */}
             <div 
-              ref={commentScrollRef}
-              onScroll={handleCommentScroll}
               role="log"
               aria-live="polite"
-              className="flex-1 overflow-y-auto max-h-[460px] pr-1 space-y-4"
+              className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-5 flex flex-col relative custom-scrollbar"
             >
-              {filteredComments.length === 0 ? (
+              <div ref={commentsStartRef} />
+              {paginatedComments.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 space-y-2">
                   <MessageCircle className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
                   <p className="text-xs font-medium">No comments match your filter</p>
                 </div>
               ) : (
-                <div style={{ paddingTop: `${commentVirtualSlice.paddingTop}px`, paddingBottom: `${commentVirtualSlice.paddingBottom}px` }} className="space-y-4">
-                  {commentVirtualSlice.items.map((comment) => (
+                <div className="space-y-4">
+                  {paginatedComments.map((comment) => (
                     <CommentRow 
                       key={comment.id} 
                       comment={comment} 
                       onLike={handleToggleCommentLike} 
                       onAddReply={handleAddReplyToComment} 
-                      isPlayingAudio={!!isPlayingAudio[comment.id]} 
-                      onToggleVoice={handleToggleVoicePlay} 
-                      showReplies={!!showReplies[comment.id]} 
-                      onToggleReplies={handleToggleReplies} 
+                      onEdit={handleEditComment}
+                      onDelete={handleDeleteComment}
+                      onToggleReaction={handleToggleReaction}
+                      onTogglePin={handleTogglePinComment}
                     />
                   ))}
+                  {visibleCommentCount < filteredComments.length && (
+                    <div className="pt-4 pb-4 text-center flex justify-center items-center">
+                      <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-blue-500 animate-spin" />
+                    </div>
+                  )}
+                  <div ref={commentsEndRef} />
                 </div>
               )}
             </div>
 
             {/* Comment Composer Input */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-auto shrink-0">
-              <form onSubmit={handleAddComment} className="flex items-center gap-2">
-                <AvatarWithFallback name="You" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80" size="w-8 h-8" />
+              <form onSubmit={handleAddComment} className="flex items-center gap-3">
+                <div className="relative">
+                  <AvatarWithFallback 
+                    name={profile?.name || "You"} 
+                    src={profile?.animatedAvatar || profile?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"} 
+                    size="w-8 h-8" 
+                  />
+                  <div className="scale-75 origin-center">
+                    <AvatarDecorationFrame decoration={profile?.subscriptionTier === 'nitro_pro' ? profile.avatarDecoration : 'none'} />
+                  </div>
+                </div>
 
                 <div className="flex-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full px-3.5 py-2 flex items-center gap-1.5 focus-within:ring-2 focus-within:ring-blue-500/40 transition">
-                  <input
-                    id="side-comment-input"
-                    type="text"
+                  <CommentInputWithAutocomplete
+                    id="main-comment-input"
                     placeholder="Write a comment..."
                     value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
+                    onChange={setNewCommentText}
                     className="w-full bg-transparent border-none text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none font-medium"
                   />
 
                   <div className="flex items-center gap-0.5 text-slate-400">
+                    <button
+                      type="button"
+                      title="Attach mock media"
+                      onClick={() => setNewCommentMedia(newCommentMedia ? null : "https://images.unsplash.com/photo-1682687982501-1e58b8147382?w=300&auto=format&fit=crop&q=80")}
+                      className={`hover:text-slate-600 dark:hover:text-slate-200 transition p-1 cursor-pointer ${newCommentMedia ? 'text-blue-500' : ''}`}
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    </button>
                     <button 
                       type="button" 
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -1234,17 +1966,28 @@ export function SocialPostCard({
                     >
                       <Smile className="w-3.5 h-3.5 text-amber-500" />
                     </button>
-                    {newCommentText.trim() && (
+                    {(newCommentText.trim() || newCommentMedia) && (
                       <button 
                         type="submit" 
-                        className="p-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition ml-0.5 cursor-pointer shadow-xs"
+                        disabled={isSubmitting}
+                        className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-full transition ml-0.5 cursor-pointer shadow-xs"
+                        aria-label="Submit comment"
                       >
-                        <Send className="w-3 h-3" />
+                        {isSubmitting ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
                 </div>
               </form>
+
+              {newCommentMedia && (
+                <div className="mt-2 ml-11 relative inline-block">
+                  <img src={newCommentMedia} alt="Preview" className="h-20 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm object-cover" />
+                  <button type="button" onClick={() => setNewCommentMedia(null)} className="absolute -top-2 -right-2 bg-slate-800 text-white rounded-full p-1 shadow-md hover:bg-slate-700 cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
 
               {showEmojiPicker && (
                 <div className="flex items-center gap-1.5 pl-10 pt-2 animate-in fade-in">
@@ -1274,6 +2017,9 @@ export function SocialPostCard({
           onClick={() => setShowAnalyticsModal(false)}
         >
           <div 
+            role="dialog"
+            aria-modal="true"
+            aria-label="Post Analytics"
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl animate-in fade-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1282,7 +2028,7 @@ export function SocialPostCard({
                 <PieChart className="w-5 h-5 text-blue-500" />
                 Post Performance Analytics
               </h3>
-              <button type="button" onClick={() => setShowAnalyticsModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+              <button type="button" aria-label="Close analytics modal" onClick={() => setShowAnalyticsModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1345,6 +2091,9 @@ export function SocialPostCard({
           onClick={() => setShowReactionUsersModal(false)}
         >
           <div 
+            role="dialog"
+            aria-modal="true"
+            aria-label="Reaction Users"
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1353,7 +2102,7 @@ export function SocialPostCard({
                 <Users className="w-5 h-5 text-rose-500" />
                 Post Reactions ({likesCount})
               </h3>
-              <button type="button" onClick={() => setShowReactionUsersModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+              <button type="button" aria-label="Close reactions modal" onClick={() => setShowReactionUsersModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1414,6 +2163,9 @@ export function SocialPostCard({
           onClick={() => setShowShareModal(false)}
         >
           <div 
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share Post"
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1422,7 +2174,7 @@ export function SocialPostCard({
                 <Share className="w-5 h-5 text-blue-500" />
                 Share Post
               </h3>
-              <button type="button" onClick={() => setShowShareModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
+              <button type="button" aria-label="Close share modal" onClick={() => setShowShareModal(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1457,11 +2209,24 @@ export function SocialPostCard({
       {/* Lightbox Gallery Modal */}
       {lightboxIndex !== null && (
         <div 
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image Gallery Lightbox"
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setLightboxIndex(null)}
+          onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+          onTouchEnd={(e) => {
+            if (touchStartX === null) return;
+            const diff = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(diff) > 60 && images.length > 1) {
+              setLightboxIndex(prev => prev !== null ? (diff > 0 ? (prev - 1 + images.length) % images.length : (prev + 1) % images.length) : null);
+            }
+            setTouchStartX(null);
+          }}
         >
           <button
             type="button"
+            aria-label="Close lightbox"
             onClick={() => setLightboxIndex(null)}
             className="absolute top-5 right-5 p-3 bg-white/10 text-white rounded-full hover:bg-white/20 transition z-50 cursor-pointer"
           >

@@ -1,50 +1,25 @@
 export type AvatarDecoration = 
   | 'none' 
-  | 'crown' 
-  | 'neon' 
-  | 'sparkle' 
-  | 'flame' 
-  | 'diamond' 
   | 'sakura' 
-  | 'matrix'
-  | 'solar_flare'
-  | 'galaxy_warp'
-  | 'holographic_glitch'
-  | 'anime_power_aura'
-  | 'cyber_hacker_void'
-  | 'celestial_orbit'
-  | 'phoenix_flame';
+  | 'autumn_leaves' 
+  | 'snowfall' 
+  | 'stardust';
 
 export type BannerEffect = 
   | 'none' 
-  | 'nebula' 
-  | 'matrix' 
-  | 'gold_dust' 
-  | 'sakura' 
-  | 'frostbite' 
-  | 'lightning'
-  | 'retrowave_grid'
-  | 'hyperdrive_stars'
-  | 'cyberpunk_anime_city'
-  | 'cyber_dragon_void'
-  | 'arcade_synthwave_sunset'
-  | 'starlight_warp_nebula'
-  | 'sakura_moonlight_temple';
+  | 'sakura_moonlight' 
+  | 'autumn_sunset' 
+  | 'winter_night' 
+  | 'starry_galaxy';
 
 export type ProfileEffect = 
   | 'none' 
-  | 'magic_spells' 
-  | 'autumn_leaves' 
-  | 'neon_glitch' 
-  | 'dragon_fire' 
   | 'sakura_breeze'
-  | 'cyber_matrix_stream'
-  | 'cosmic_void'
-  | 'lightning_surge'
-  | 'hypesquad_explosion'
-  | 'retrowave_sunset';
+  | 'autumn_breeze'
+  | 'winter_blizzard'
+  | 'cosmic_stardust';
 
-export type ProfileTheme = 'blurple' | 'nitro_pink' | 'cyber_emerald' | 'solar_gold' | 'midnight_obsidian' | 'synthwave_neon';
+export type ProfileTheme = 'blurple' | 'nitro_pink' | 'cyber_emerald' | 'solar_gold' | 'midnight_obsidian' | 'synthwave_neon' | 'custom_hex';
 
 export type UserStatus = 'online' | 'idle' | 'dnd' | 'offline';
 
@@ -128,6 +103,13 @@ export interface MutualFriend {
   customStatus?: string;
 }
 
+export interface ConnectedAccount {
+  id: string;
+  platform: 'github' | 'twitter' | 'spotify' | 'twitch' | 'youtube' | 'steam';
+  name: string;
+  url: string;
+}
+
 export interface UserProfileStats {
   followers: number;
   likes: number;
@@ -177,11 +159,15 @@ export interface UserProfileData {
   banner: string;
   animatedBanner?: string;
   bio: string;
+  pronouns?: string;
+  joinedDiscordDate?: string;
+  joinedServerDate?: string;
   location?: string;
   customStatus?: string;
   customStatusEmoji?: string;
   vanityUrl?: string;
   themeColor: string;
+  customThemeColor?: string;
   profileTheme: ProfileTheme;
   avatarDecoration: AvatarDecoration;
   bannerEffect: BannerEffect;
@@ -194,6 +180,7 @@ export interface UserProfileData {
   gamePresence?: GamePresence;
   mutualServers?: MutualServer[];
   mutualFriends?: MutualFriend[];
+  connectedAccounts?: ConnectedAccount[];
   // Server-Specific Profile Overrides
   serverName?: string;
   serverIcon?: string;
@@ -208,4 +195,5 @@ export interface UserProfileData {
 export interface UserProfileCardProps {
   initialProfile?: UserProfileData;
   onUpdateProfile?: (updated: UserProfileData) => void;
+  onOpenSettings?: () => void;
 }
