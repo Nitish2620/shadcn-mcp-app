@@ -1,3 +1,7 @@
+import { VirtualizedSidebarList } from "./virtualized-sidebar-list";
+import { VirtualizedMessageStream } from './virtualized-message-stream';
+import { AvatarWithFallback } from './avatar-with-fallback';
+import { ChatInputEditor } from './chat-input-editor';
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +14,6 @@ import {
   MoreHorizontal, 
   Pin, 
   PinOff,
-  CheckCheck, 
   X, 
   Paperclip, 
   Sparkles,
@@ -26,7 +29,6 @@ import {
   Music,
   Mic,
   Square,
-  Play,
   Palette,
   Sticker
 } from 'lucide-react';
@@ -60,10 +62,7 @@ export type {
   VoiceNote
 };
 
-const ITEM_HEIGHT = 68; // Height of each chat row in px
-const MSG_HEIGHT = 80;  // Height of each message bubble in px
 
-const REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
 const CHAT_THEMES: ChatTheme[] = [
   { id: 'default', name: 'Discord Slate', gradient: 'from-slate-900 via-slate-900 to-slate-900', cardBg: 'bg-white dark:bg-slate-900', textAccent: 'text-blue-500', isNitroOnly: false },
@@ -168,277 +167,15 @@ const INITIAL_CHATS: ChatItem[] = [
   }
 ];
 
-/* ========================================================
-   INSTANT MNC AVATAR SYSTEM (0ms Slow 3G Latency)
-======================================================== */
-const GRADIENTS = [
-  'from-blue-500 to-indigo-600',
-  'from-emerald-500 to-teal-600',
-  'from-violet-500 to-purple-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-cyan-500 to-blue-600'
-];
-
-function getInitials(name: string): string {
-  if (!name) return '??';
-  const parts = name.trim().split(' ');
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
-function getGradient(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
-}
-
-const AvatarWithFallback = React.memo(({ name, src, size = "w-11 h-11" }: { name: string; src?: string; size?: string }) => {
-  const [imgError, setImgError] = useState(false);
-  const initials = useMemo(() => getInitials(name), [name]);
-  const gradient = useMemo(() => getGradient(name), [name]);
-
-  if (!src || imgError) {
-    return (
-      <div className={`${size} rounded-full bg-gradient-to-br ${gradient} text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-800 shrink-0 shadow-2xs`}>
-        {initials}
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt={name}
-      loading="lazy"
-      decoding="async"
-      onError={() => setImgError(true)}
-      className={`${size} rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 shrink-0`}
-    />
-  );
-});
-AvatarWithFallback.displayName = 'AvatarWithFallback';
 
 /* ========================================================
    MEMOIZED CHAT ROW ITEM
 ======================================================== */
-const ChatRowItem = React.memo(({ 
-  chat, 
-  isSelected, 
-  onSelect 
-}: { 
-  chat: ChatItem; 
-  isSelected: boolean; 
-  onSelect: (id: string) => void; 
-}) => {
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect(chat.id)}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(chat.id)}
-      aria-label={`Chat with ${chat.name}`}
-      data-state={isSelected ? "selected" : "idle"}
-      style={{ height: `${ITEM_HEIGHT}px` }}
-      className={`py-2 px-3 flex items-center gap-3 rounded-2xl cursor-pointer transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-        isSelected ? 'bg-blue-50/90 dark:bg-blue-950/50 ring-1 ring-blue-500/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
-      }`}
-    >
-      {/* Avatar with Online Status */}
-      <div className="relative shrink-0">
-        <AvatarWithFallback name={chat.name} src={chat.avatar} size="w-12 h-12" />
-        {chat.isOnline && (
-          <span className="w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900 absolute bottom-0 right-0 z-10" />
-        )}
-      </div>
 
-      {/* Details */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-1 mb-0.5">
-          <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate flex items-center gap-1.5">
-            {chat.name}
-            {chat.badge && (
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shrink-0">
-                {chat.badge}
-              </span>
-            )}
-            {chat.isPinned && <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-          </span>
-          <span className="text-[11px] text-slate-400 shrink-0 font-medium">
-            {chat.timestamp}
-          </span>
-        </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate leading-tight">
-            {chat.lastMessage}
-          </p>
-          {chat.unreadCount && chat.unreadCount > 0 ? (
-            <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">
-              {chat.unreadCount}
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-});
-ChatRowItem.displayName = 'ChatRowItem';
 
 /* ========================================================
-   MEMOIZED INTERACTIVE MESSAGE BUBBLE WITH REACTIONS
-======================================================== */
-const MessageBubble = React.memo(({ 
-  msg, 
-  onToggleReaction 
-}: { 
-  msg: Message; 
-  onToggleReaction: (msgId: string, emoji: string) => void; 
-}) => {
-  const [showPicker, setShowPicker] = useState(false);
-
-  return (
-    <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200 group relative`}>
-      {/* Bubble Container */}
-      <div className="relative group">
-        <div className={`max-w-[85%] p-3.5 rounded-2xl text-xs shadow-2xs relative ${
-          msg.isMe 
-            ? 'bg-blue-600 text-white rounded-tr-none' 
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50'
-        }`}>
-          {/* Attachment Preview if exists */}
-          {msg.attachment && (
-            <div className="mb-2 rounded-xl overflow-hidden border border-white/20">
-              {msg.attachment.type === 'image' ? (
-                <img src={msg.attachment.url} alt={msg.attachment.name} className="max-h-48 w-full object-cover rounded-lg" />
-              ) : (
-                <div className="flex items-center gap-2 p-2 bg-black/10 dark:bg-white/10 rounded-lg text-xs font-semibold">
-                  <FileText className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span className="truncate">{msg.attachment.name}</span>
-                  {msg.attachment.size && <span className="text-[10px] opacity-75 shrink-0">({msg.attachment.size})</span>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Soundboard Clip if attached */}
-          {msg.soundClip && (
-            <div className="mb-2 p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/40 flex items-center justify-between gap-3 text-xs font-bold text-purple-200">
-              <div className="flex items-center gap-2">
-                <span className="text-xl animate-bounce">{msg.soundClip.emoji}</span>
-                <div>
-                  <div className="text-white font-bold">{msg.soundClip.name}</div>
-                  <span className="text-[9px] text-purple-400 font-mono">Nitro Soundboard Clip</span>
-                </div>
-              </div>
-              <Volume2 className="w-4 h-4 text-purple-400 shrink-0" />
-            </div>
-          )}
-
-          {/* Nitro 3D Sticker if attached */}
-          {msg.sticker && (
-            <div className="mb-2 p-2 rounded-2xl bg-purple-950/30 border border-purple-500/30 flex flex-col items-center">
-              <img src={msg.sticker.image} alt={msg.sticker.name} className="w-24 h-24 object-cover rounded-xl shadow-lg animate-pulse" />
-              <span className="text-[10px] font-extrabold text-purple-400 mt-1">{msg.sticker.name} (Nitro Sticker)</span>
-            </div>
-          )}
-
-          {/* Voice Note Audio Waveform Player if attached */}
-          {msg.voiceNote && (
-            <div className="mb-2 p-3 rounded-2xl bg-slate-900/90 text-white border border-slate-700/60 flex items-center gap-3 w-56">
-              <button 
-                type="button"
-                className="w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-500 flex items-center justify-center text-white shrink-0 cursor-pointer shadow-md"
-              >
-                <Play className="w-4 h-4 fill-white ml-0.5" />
-              </button>
-              <div className="flex-1 space-y-1">
-                <div className="flex items-end gap-1 h-5 px-1">
-                  {msg.voiceNote.waveform.map((h, i) => (
-                    <motion.span 
-                      key={i}
-                      animate={{ height: [`${h}%`, `${Math.max(20, h * 0.5)}%`, `${h}%`] }}
-                      transition={{ repeat: Infinity, duration: 1.2, delay: i * 0.1 }}
-                      className="w-1 bg-purple-400 rounded-full"
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between text-[9px] font-mono text-purple-300">
-                  <span>Voice Note</span>
-                  <span>{msg.voiceNote.duration}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <p className="leading-relaxed break-words flex items-center gap-1">
-            {msg.text}
-            {msg.nitroCustomEmoji && <span className="text-lg animate-pulse">{msg.nitroCustomEmoji}</span>}
-          </p>
-
-          {/* Message Action Trigger (Emoji reaction button) */}
-          <button
-            type="button"
-            onClick={() => setShowPicker(!showPicker)}
-            aria-label="Add reaction"
-            className={`absolute top-1 ${msg.isMe ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer`}
-          >
-            <SmilePlus className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Emoji Picker Popover */}
-          {showPicker && (
-            <div className={`absolute -top-10 ${msg.isMe ? 'right-0' : 'left-0'} z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-full px-2 py-1 flex items-center gap-1 animate-in fade-in zoom-in-95`}>
-              {REACTION_EMOJIS.map(emoji => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => {
-                    onToggleReaction(msg.id, emoji);
-                    setShowPicker(false);
-                  }}
-                  className="hover:scale-125 transition text-sm cursor-pointer p-0.5"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Reaction Badges */}
-        {msg.reactions && msg.reactions.length > 0 && (
-          <div className={`flex flex-wrap items-center gap-1 mt-1 ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
-            {msg.reactions.map(r => (
-              <button
-                key={r.emoji}
-                type="button"
-                onClick={() => onToggleReaction(msg.id, r.emoji)}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 transition cursor-pointer ${
-                  r.users.includes('me')
-                    ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400'
-                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                <span>{r.emoji}</span>
-                <span>{r.count}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 px-1">
-        <span>{msg.timestamp}</span>
-        {msg.isMe && <CheckCheck className="w-3.5 h-3.5 text-blue-500" />}
-      </div>
-    </div>
-  );
-});
-MessageBubble.displayName = 'MessageBubble';
-
-/* ========================================================
-   IndexedDB PERSISTENCE LAYER
+   IndexedDB PERSISTENCE LAYER (MNC-GRADE)
 ======================================================== */
 const IDB_NAME = 'ChatStressTestDB';
 const IDB_STORE = 'chats';
@@ -448,52 +185,98 @@ function openStressDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, IDB_VERSION);
     req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE);
+      try {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      } catch (err) {
+        reject(err);
       }
+    };
+    req.onblocked = () => {
+      console.warn('IDB Blocked: Please close other tabs.');
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
+// Write Queue to prevent concurrent save race conditions
+let saveQueue = Promise.resolve();
+
 function idbSaveChats(chats: ChatItem[]): Promise<void> {
-  return openStressDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).put(chats, 'data');
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => { db.close(); reject(tx.error); };
-    });
-  });
+  saveQueue = saveQueue.then(() => 
+    openStressDB().then(db => {
+      return new Promise<void>((resolve, reject) => {
+        try {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          tx.oncomplete = () => resolve();
+          tx.onabort = () => reject(new Error('IDB Transaction aborted'));
+          tx.onerror = () => reject(tx.error);
+          
+          tx.objectStore(IDB_STORE).put(chats, 'data');
+        } catch (err) {
+          reject(err);
+        } finally {
+          // In IDB, tx.oncomplete/onerror handles connection lifecycle in the Promise,
+          // but if tx creation itself throws, we close immediately.
+          if (db && !db.objectStoreNames) db.close(); 
+        }
+      }).finally(() => {
+        db.close();
+      });
+    }).catch(err => {
+      console.error('Save failed:', err);
+    })
+  );
+  return saveQueue;
 }
 
 function idbLoadChats(): Promise<ChatItem[] | null> {
   return openStressDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get('data');
-      req.onsuccess = () => {
-        db.close();
-        const val = req.result;
-        if (Array.isArray(val) && val.length > 0) resolve(val);
-        else resolve(null);
-      };
-      req.onerror = () => { db.close(); reject(req.error); };
+    return new Promise<ChatItem[] | null>((resolve, reject) => {
+      try {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get('data');
+        tx.oncomplete = () => {
+          const val = req.result;
+          if (Array.isArray(val) && val.length > 0) resolve(val);
+          else resolve(null);
+        };
+        tx.onabort = () => reject(new Error('IDB Transaction aborted'));
+        tx.onerror = () => reject(req.error);
+      } catch (err) {
+        reject(err);
+      }
+    }).finally(() => {
+      db.close();
     });
   });
 }
 
 function idbClearChats(): Promise<void> {
-  return openStressDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).delete('data');
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => { db.close(); reject(tx.error); };
-    });
-  });
+  saveQueue = saveQueue.then(() => 
+    openStressDB().then(db => {
+      return new Promise<void>((resolve, reject) => {
+        try {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          tx.oncomplete = () => resolve();
+          tx.onabort = () => reject(new Error('IDB Transaction aborted'));
+          tx.onerror = () => reject(tx.error);
+          
+          tx.objectStore(IDB_STORE).delete('data');
+        } catch (err) {
+          reject(err);
+        }
+      }).finally(() => {
+        db.close();
+      });
+    }).catch(err => {
+      console.error('Clear failed:', err);
+    })
+  );
+  return saveQueue;
 }
 
 /* ========================================================
@@ -553,11 +336,20 @@ export function ChatListCard({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
   const [isDBReady, setIsDBReady] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingState, setTypingState] = useState<Record<string, boolean>>({});
+  
+  const chatListRef = useRef<ChatItem[]>(chatList);
+  useEffect(() => { chatListRef.current = chatList; }, [chatList]);
 
   // File Upload Draft State
   const [draftAttachment, setDraftAttachment] = useState<MessageAttachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(msg);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2500);
+  }, []);
 
   // File Upload Validation with Subscription Tier Limits
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -581,34 +373,40 @@ export function ChatListCard({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setDraftAttachment({
-        name: file.name,
-        url: event.target?.result as string,
-        type: file.type.startsWith('image/') ? 'image' : 'file',
-        size: `${sizeMb.toFixed(1)} MB`,
-        isNitroClip: isGif
-      });
-      setToastMessage('Attachment uploaded! Ready to send ✨');
-      setTimeout(() => setToastMessage(null), 2500);
-    };
-    reader.readAsDataURL(file);
-  }, [tier]);
+    setDraftAttachment({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('image/') ? 'image' : 'file',
+      size: `${sizeMb.toFixed(1)} MB`,
+      isNitroClip: isGif
+    });
+    setToastMessage('Attachment uploaded! Ready to send ✨');
+    setTimeout(() => setToastMessage(null), 2500);
+    e.target.value = '';
+  }, [tier, showToast]);
 
-  // Virtual Windowing States
-  const [scrollTop, setScrollTop] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [msgScrollTop, setMsgScrollTop] = useState(0);
-  const msgScrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Context Menu & Profile Modal State
+
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const particlesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aiReplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // MNC-Grade: Global Timer Cleanup to prevent memory leaks on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (particlesTimerRef.current) clearTimeout(particlesTimerRef.current);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (aiReplyTimerRef.current) clearTimeout(aiReplyTimerRef.current);
+    };
+  }, []);
 
   // Progressive Hydration
   useEffect(() => {
@@ -622,12 +420,13 @@ export function ChatListCard({
           setIsLoadingFromDB(false);
 
           if (stored.length > 50 || stored.some(c => c.messages.length > 50)) {
-            setTimeout(() => {
+            const timer = setTimeout(() => {
               if (!cancelled) {
                 setChatList(stored);
                 setIsDBReady(true);
               }
             }, 30);
+            return () => clearTimeout(timer);
           } else {
             setIsDBReady(true);
           }
@@ -675,21 +474,21 @@ export function ChatListCard({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Auto-scroll messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedChatId, chatList, isTyping]);
 
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
-  }, []);
 
-  // Audio Haptic Synthesizer
+  // Audio Haptic Synthesizer (MNC-Grade, single AudioContext to prevent exhaustion)
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+
   const playSoundEffect = useCallback((type: 'send' | 'select' | 'pop' = 'send') => {
-    if (!soundEnabled) return;
+    if (!soundEnabledRef.current) return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -700,8 +499,10 @@ export function ChatListCard({
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.12);
-    } catch {}
-  }, [soundEnabled]);
+    } catch (e) {
+      console.warn("AudioContext error", e);
+    }
+  }, []); // Empty dependencies ensures perfect stability for handleSelectChat
 
   // Filter & Smart Pin Sorting (Pinned items float to top)
   const filteredChats = useMemo(() => {
@@ -719,49 +520,12 @@ export function ChatListCard({
     return [...list].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
   }, [chatList, debouncedQuery, filterTab]);
 
-  // Virtual Windowing - Left List
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  };
 
-  const virtualSlice = useMemo(() => {
-    const totalCount = filteredChats.length;
-    if (totalCount <= 20) {
-      return { items: filteredChats, paddingTop: 0, paddingBottom: 0 };
-    }
-    const containerHeight = 520;
-    const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - 3);
-    const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / ITEM_HEIGHT) + 6);
-    return {
-      items: filteredChats.slice(startIndex, endIndex),
-      paddingTop: startIndex * ITEM_HEIGHT,
-      paddingBottom: (totalCount - endIndex) * ITEM_HEIGHT
-    };
-  }, [filteredChats, scrollTop]);
 
-  // Virtual Windowing - Right Message Stream
-  const handleMsgScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setMsgScrollTop(e.currentTarget.scrollTop);
-  };
-
-  const msgVirtualSlice = useMemo(() => {
-    const msgs = selectedChat?.messages || [];
-    const totalCount = msgs.length;
-    if (totalCount <= 30) {
-      return { items: msgs, paddingTop: 0, paddingBottom: 0 };
-    }
-    const containerHeight = 440;
-    const startIndex = Math.max(0, Math.floor(msgScrollTop / MSG_HEIGHT) - 5);
-    const endIndex = Math.min(totalCount, startIndex + Math.ceil(containerHeight / MSG_HEIGHT) + 10);
-    return {
-      items: msgs.slice(startIndex, endIndex),
-      paddingTop: startIndex * MSG_HEIGHT,
-      paddingBottom: (totalCount - endIndex) * MSG_HEIGHT
-    };
-  }, [selectedChat?.messages, msgScrollTop]);
 
   // Super Reaction Particle Explosion Generator
   const triggerSuperParticles = useCallback((emoji: string) => {
+    if (particlesTimerRef.current) clearTimeout(particlesTimerRef.current);
     const newParticles = Array.from({ length: 16 }).map((_, i) => ({
       id: Date.now() + i + Math.random(),
       x: Math.random() * 80 + 10,
@@ -769,17 +533,17 @@ export function ChatListCard({
       emoji
     }));
     setSuperParticles(newParticles);
-    setTimeout(() => setSuperParticles([]), 1800);
+    particlesTimerRef.current = setTimeout(() => setSuperParticles([]), 1800);
   }, []);
 
   // Deep Logic: Message Emoji Reaction Toggle Handler
   const handleToggleReaction = useCallback((msgId: string, emoji: string) => {
-    if (!selectedChat) return;
+    if (!selectedChatId) return;
     playSoundEffect('pop');
     triggerSuperParticles(emoji);
 
     setChatList(prev => prev.map(c => {
-      if (c.id === selectedChat.id) {
+      if (c.id === selectedChatId) {
         const updatedMessages = c.messages.map(m => {
           if (m.id === msgId) {
             const currentReactions = m.reactions || [];
@@ -807,12 +571,12 @@ export function ChatListCard({
       }
       return c;
     }));
-  }, [selectedChat, playSoundEffect, triggerSuperParticles]);
+  }, [selectedChatId, playSoundEffect, triggerSuperParticles]);
 
   // Deep Logic: Send Message & Trigger AI Responder
-  const handleSendMessage = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if ((!newMessageText.trim() && !draftAttachment) || !selectedChat) return;
+  const handleSendMessage = useCallback((e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if ((!newMessageText.trim() && !draftAttachment) || !selectedChatId) return;
 
     playSoundEffect('send');
 
@@ -828,7 +592,7 @@ export function ChatListCard({
     };
 
     setChatList(prev => prev.map(c => {
-      if (c.id === selectedChat.id) {
+      if (c.id === selectedChatId) {
         return {
           ...c,
           lastMessage: newMsg.text,
@@ -843,20 +607,25 @@ export function ChatListCard({
     setNewMessageText('');
     setDraftAttachment(null);
 
-    // AI Auto-Responder Deep Logic
-    const currentChatId = selectedChat.id;
-    const currentContactName = selectedChat.name;
+    // AI Auto-Responder Deep Logic (MNC-grade decoupled from UI render cycle)
+    const targetChatId = selectedChatId;
+    const currentContactName = chatListRef.current.find(c => c.id === targetChatId)?.name || 'Contact';
 
+    // We don't clear previous timers so multiple chats can be auto-responding concurrently in the background
     setTimeout(() => {
-      setIsTyping(true);
+      setTypingState(prev => ({ ...prev, [targetChatId]: true }));
     }, 400);
 
     setTimeout(() => {
-      setIsTyping(false);
+      setTypingState(prev => {
+        const next = { ...prev };
+        delete next[targetChatId];
+        return next;
+      });
       playSoundEffect('pop');
 
       const aiReplies = [
-        `Thanks for sending that over, Ray! Checking it right now. 👍`,
+        `Thanks for sending that over! Checking it right now. 👍`,
         `Got it! Looks great on my end. Let's sync on tomorrow's call. 🚀`,
         `Appreciate the update! I will review and get back to you shortly.`,
         `Perfect! I've logged this in the project tracker.`
@@ -865,25 +634,27 @@ export function ChatListCard({
 
       const autoMsg: Message = {
         id: (Date.now() + 1).toString(),
-        senderId: currentChatId,
+        senderId: targetChatId,
         senderName: currentContactName,
         text: randomReply,
-        timestamp: 'Just now'
+        timestamp: 'Just now',
+        status: 'read'
       };
 
       setChatList(prev => prev.map(c => {
-        if (c.id === currentChatId) {
+        if (c.id === targetChatId) {
           return {
             ...c,
             lastMessage: autoMsg.text,
             timestamp: 'Just now',
+            unreadCount: (selectedChatId === targetChatId) ? 0 : (c.unreadCount || 0) + 1,
             messages: [...c.messages, autoMsg]
           };
         }
         return c;
       }));
     }, 1800);
-  }, [newMessageText, draftAttachment, selectedChat, playSoundEffect]);
+  }, [newMessageText, draftAttachment, selectedChatId, playSoundEffect]);
 
   const handleSelectChat = useCallback((id: string) => {
     playSoundEffect('select');
@@ -945,13 +716,27 @@ export function ChatListCard({
 
   const handleDeleteChat = () => {
     setShowContextMenu(false);
-    if (!selectedChat) return;
-    setChatList(prev => prev.filter(c => c.id !== selectedChat.id));
-    showToast(`Deleted chat with ${selectedChat.name} 🗑️`);
-    if (chatList.length > 1) {
-      const remaining = chatList.filter(c => c.id !== selectedChat.id);
-      setSelectedChatId(remaining[0]?.id || null);
-    }
+    if (!selectedChatId) return;
+    const chatName = chatList.find(c => c.id === selectedChatId)?.name || 'Chat';
+    const deletedId = selectedChatId;
+    showToast(`Deleted chat with ${chatName} 🗑️`);
+    
+    setChatList(prev => {
+      const remaining = prev.filter(c => c.id !== selectedChatId);
+      if (remaining.length > 0) {
+        setSelectedChatId(remaining[0]?.id || null);
+      } else {
+        setSelectedChatId(null);
+      }
+      return remaining;
+    });
+
+    setTypingState(prev => {
+      const newState = { ...prev };
+      delete newState[deletedId];
+      return newState;
+    });
+
   };
 
   return (
@@ -1049,34 +834,12 @@ export function ChatListCard({
           </div>
 
           {/* VIRTUALIZED CHAT STREAM */}
-          <div 
-            ref={scrollContainerRef}
-            onScroll={handleScroll}
-            role="list" 
-            aria-label="Chats stream" 
-            className="flex-1 overflow-y-auto max-h-[520px] pr-0.5"
-          >
-            {isLoadingFromDB ? (
-              <div className="py-12 text-center text-xs text-slate-400 animate-pulse">
-                Loading conversations...
-              </div>
-            ) : filteredChats.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
-                No chats found
-              </div>
-            ) : (
-              <div style={{ paddingTop: `${virtualSlice.paddingTop}px`, paddingBottom: `${virtualSlice.paddingBottom}px` }} className="space-y-1">
-                {virtualSlice.items.map((chat) => (
-                  <ChatRowItem
-                    key={chat.id}
-                    chat={chat}
-                    isSelected={chat.id === selectedChatId}
-                    onSelect={handleSelectChat}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          <VirtualizedSidebarList
+            isLoadingFromDB={isLoadingFromDB}
+            filteredChats={filteredChats}
+            selectedChatId={selectedChatId}
+            handleSelectChat={handleSelectChat}
+          />
         </div>
 
         {/* Right Side: Active Messenger Thread Card */}
@@ -1115,7 +878,7 @@ export function ChatListCard({
                       {selectedChat.isPinned && <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
                     </h3>
                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      {isTyping ? <span className="animate-pulse font-bold text-blue-500">Typing a reply...</span> : (selectedChat.statusText || 'Active now')}
+                      {typingState[selectedChat.id] ? (<span className="animate-pulse font-bold text-blue-500">Typing a reply...</span>) : (selectedChat.statusText || 'Active now')}
                     </p>
                   </div>
                 </div>
@@ -1235,27 +998,16 @@ export function ChatListCard({
                 </div>
               </div>
 
-              {/* MESSAGES STREAM (VIRTUALIZED) */}
-              <div
-                ref={msgScrollContainerRef}
-                onScroll={handleMsgScroll}
-                role="log"
-                aria-live="polite"
-                className="flex-1 overflow-y-auto py-4 max-h-[460px] pr-1"
-              >
-                <div style={{ paddingTop: `${msgVirtualSlice.paddingTop}px`, paddingBottom: `${msgVirtualSlice.paddingBottom}px` }} className="space-y-4">
-                  {msgVirtualSlice.items.map(msg => (
-                    <MessageBubble key={msg.id} msg={msg} onToggleReaction={handleToggleReaction} />
-                  ))}
-                </div>
-                {isTyping && (
-                  <div className="flex items-center gap-2 text-xs text-slate-400 py-2 animate-pulse">
-                    <AvatarWithFallback name={selectedChat.name} src={selectedChat.avatar} size="w-6 h-6" />
-                    <span>{selectedChat.name} is typing...</span>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+              {/* MESSAGES STREAM (VIRTUALIZED) — scroll state is local to this component */}
+              <VirtualizedMessageStream
+                messages={selectedChat.messages}
+                isTyping={typingState[selectedChat.id] || false}
+                selectedChatId={selectedChatId ?? ''}
+                selectedChatName={selectedChat.name}
+                selectedChatAvatar={selectedChat.avatar}
+                onToggleReaction={handleToggleReaction}
+                chatListVersion={chatList.length}
+              />
 
               {/* DRAFT ATTACHMENT PREVIEW BAR */}
               {draftAttachment && (
@@ -1467,15 +1219,20 @@ export function ChatListCard({
                       } else {
                         setIsRecordingVoice(false);
                         playSoundEffect('send');
+                        
+                        const formatTime = (secs: number) => `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`;
+                        const finalSecs = Math.max(3, recordingSecs);
+                        const durationStr = formatTime(finalSecs);
+                        
                         const newMsg: Message = {
                           id: Date.now().toString(),
                           senderId: 'me',
                           senderName: 'You',
-                          text: `Voice note (0:0${Math.max(3, recordingSecs)})`,
+                          text: `Voice note (${durationStr})`,
                           timestamp: 'Just now',
                           isMe: true,
                           status: 'read',
-                          voiceNote: { duration: `0:0${Math.max(3, recordingSecs)}`, waveform: [40, 80, 60, 100, 30, 70, 90, 50] }
+                          voiceNote: { duration: durationStr, waveform: [40, 80, 60, 100, 30, 70, 90, 50] }
                         };
                         setChatList(prev => prev.map(c => c.id === selectedChat.id ? { ...c, lastMessage: newMsg.text, messages: [...c.messages, newMsg] } : c));
                         showToast('Voice note sent! 🎙️');
@@ -1487,12 +1244,13 @@ export function ChatListCard({
                     {isRecordingVoice ? <Square className="w-4.5 h-4.5 fill-white" /> : <Mic className="w-4.5 h-4.5" />}
                   </button>
 
-                  <input
-                    type="text"
-                    placeholder={isRecordingVoice ? `Recording voice note (0:0${recordingSecs}s)...` : `Message ${selectedChat.name}...`}
+                  <ChatInputEditor
+                    placeholder={isRecordingVoice ? `Recording voice note (${Math.floor(recordingSecs / 60)}:${(recordingSecs % 60).toString().padStart(2, '0')})...` : `Message ${selectedChat.name}...`}
                     value={newMessageText}
-                    onChange={(e) => setNewMessageText(e.target.value)}
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 rounded-full text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50"
+                    onChange={(val) => setNewMessageText(val)}
+                    onSubmit={() => handleSendMessage()}
+                    disabled={isRecordingVoice}
+                    maxLength={tier === 'nitro_pro' ? 8000 : tier === 'nitro_basic' ? 4000 : 2000}
                   />
 
                   <button type="submit" aria-label="Send message" className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition shadow-xs cursor-pointer">
